@@ -1,0 +1,32 @@
+body {
+  display: grid;
+  background-color: lightgrey;
+  grid-template-columns: 15em auto;
+}
+.article {
+  display: grid;
+  grid-template-columns: 15em auto 5em;
+
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+* + * {
+  margin-top: 0.5em;
+}
+#sidebar {
+  background-color: #294973;
+  color: #d7dde4;
+}
+body {
+  margin: 0;
+}
+#articles,
+#sidebar,
+.article {
+  padding: 1em;
+}
+.compact * + * {
+  margin-top: 0.75em;
+}
+.margins-off > * {
+  margin-top: 0;
+}

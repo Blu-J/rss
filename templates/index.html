@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html" ;="" charset="UTF-8" />
+    <title>RSS</title>
+    <meta name="referrer" content="origin" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Default favicon in 16x16px and 32x32px -->
+    <link rel="icon" href="/favicon.ico" />
+
+    <link rel="stylesheet" href="static/styles.css" />
+  </head>
+  <body>
+    <div id="sidebar">
+      <div class="header">
+        <input type="text" placeholder="Search" autocomplete="off" />
+      </div>
+      <div class="Subscriptions"></div>
+
+      {% for subscription in subscriptions %}
+      <div class="subscription_category">
+        {{subscription.title | capitalize}}
+      </div>
+      {% endfor %}
+    </div>
+    <div id="articles">
+      {% for item in items %}
+      <div
+        class="article margins-off"
+        id="article-{{item.id.unwrap_or_default()}}"
+      >
+        {% let subscription =
+        subscription_map.get(item.subscription_id).unwrap()%}
+        <div class="subscription">{{subscription.title | capitalize}}</div>
+        <div class="title margin">
+          <a href="{{item.link}}">{{item.title | capitalize}}</a>
+        </div>
+        <div class="comments">
+          {% match item.comments %} {% when Some with (comments) %}
+          <a href="{{comments}}">comments</a>
+          {% when None %} {% endmatch %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </body>
+</html>
