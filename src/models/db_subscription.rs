@@ -2,13 +2,14 @@ use std::time::SystemTime;
 
 use color_eyre::{eyre::bail, Result};
 use rss::Channel;
-use sqlx::{query, query_as, Executor, Sqlite};
+use sqlx::{query, query_file_as, Executor, Sqlite};
 
 use super::DbItem;
 
 #[derive(Debug, Clone)]
 pub struct DbSubscription {
     pub id: Option<i64>,
+    pub unreads: Option<i64>,
     pub title: String,
     pub category: String,
     pub rss_feed: String,
@@ -41,38 +42,32 @@ impl DbSubscription {
                 author: item.author,
                 description: item.description,
                 comments: item.comments,
+                contents: item.content,
             })
             .collect();
         Ok(items)
     }
 
     pub async fn fetch<'a>(
+        id: i64,
         executor: impl Executor<'a, Database = Sqlite>,
-        title: &str,
     ) -> Result<Option<Self>> {
-        let answer = query_as!(
-            Self,
-            r#"SELECT id as "id?", title, category, rss_feed FROM subscriptions WHERE title = ?"#,
-            title
-        )
-        .fetch_optional(executor)
-        .await?;
+        let answer = query_file_as!(Self, "queries/subscription_fetch.sql", id)
+            .fetch_optional(executor)
+            .await?;
         Ok(answer)
     }
     pub async fn fetch_all<'a>(
         executor: impl Executor<'a, Database = Sqlite>,
     ) -> Result<Vec<Self>> {
-        let answer = query_as!(
-            Self,
-            r#"SELECT id as "id?", title, category, rss_feed FROM subscriptions "#,
-        )
-        .fetch_all(executor)
-        .await?;
+        let answer = query_file_as!(Self, "queries/subscription_fetch_all.sql")
+            .fetch_all(executor)
+            .await?;
         Ok(answer)
     }
     pub async fn insert<'a>(&self, executor: impl Executor<'a, Database = Sqlite>) -> Result<()> {
         query!(
-            "INSERT INTO subscriptions ( category, title, rss_feed) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+            r#"INSERT INTO subscriptions ( category, title, rss_feed) VALUES (?, ?, ?) ON CONFLICT DO NOTHING"#,
             self.category,
             self.title,
             self.rss_feed

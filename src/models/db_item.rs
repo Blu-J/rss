@@ -9,17 +9,18 @@ pub struct DbItem {
     pub pub_date: i64,
     pub author: Option<String>,
     pub description: Option<String>,
+    pub contents: Option<String>,
     pub comments: Option<String>,
 }
 
 impl DbItem {
     pub async fn fetch<'a>(
+        id: i64,
         executor: impl Executor<'a, Database = Sqlite>,
-        id: &str,
     ) -> Result<Option<Self>> {
         let answer = query_as!(
             Self,
-            r#"SELECT  id as "id?", subscription_id, title, pub_date,  link, author, description, comments FROM items where id = ?"#,
+            r#"SELECT  id as "id?", subscription_id, title, pub_date,  link, author, description,contents, comments FROM items where id = ?"#,
             id
         )
         .fetch_optional(executor)
@@ -37,7 +38,7 @@ impl DbItem {
     ) -> Result<Vec<Self>> {
         let answer = query_as!(
             Self,
-            r#"SELECT id as "id?", subscription_id, title, pub_date,  link, author, description, comments
+            r#"SELECT id as "id?", subscription_id, contents, title, pub_date,  link, author, description, comments
             FROM items"#,
         )
         .fetch_all(executor)

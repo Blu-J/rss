@@ -1,0 +1,21 @@
+<div
+  hx-get="/item/item.id.unwrap_or_default()"
+  class="article margins-off"
+  id="article-{{item.id.unwrap_or_default()}}"
+>
+  <div class="subscription">{{subscription.title | capitalize}}</div>
+  <div class="title margin">
+    <a href="{{item.link}}">{{item.title | capitalize}}</a>
+  </div>
+  <div class="comments">
+    {% match item.comments %} {% when Some with (comments) %}
+    <a href="{{comments}}">comments</a>
+    {% when None %} {% endmatch %}
+  </div>
+  {% match item.description %} {% when Some with (description) %}
+  <div class="description">{{description|ammonia|safe}}</div>
+  {% when None %} {% endmatch %} {% match item.contents %} {% when Some with
+  (contents) %} contents
+  <div class="contents">{{contents|ammonia|safe}}</div>
+  {% when None %} {% endmatch %}
+</div>

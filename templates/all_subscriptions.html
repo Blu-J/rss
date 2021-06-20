@@ -1,0 +1,18 @@
+<div id="all-subscriptions">
+  <div id="sidebar">
+    <div class="header">
+      <input type="text" placeholder="Search" autocomplete="off" />
+    </div>
+    <div class="Subscriptions"></div>
+
+    {% for subscription in subscriptions %}
+    <div class="subscription_category">
+      {{subscription.title | capitalize}}
+      {{subscription.unreads.unwrap_or_default()}}
+    </div>
+    {% endfor %}
+  </div>
+  <div id="articles">
+    {% for item in items %} {% include "item_lite.html" %} {% endfor %}
+  </div>
+</div>
