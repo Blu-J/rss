@@ -47,7 +47,9 @@ async fn main() -> color_eyre::Result<()> {
                 _ = timeout(Duration::from_secs(30), async {
                         items.truncate(0);
                         let start = Utc::now();
-                        for subscription in DbSubscription::fetch_all(&clients.pool).await? {
+                        let mut subscriptions = DbSubscription::fetch_all(&clients.pool).await?;
+                        subscriptions.reverse();
+                        for subscription in subscriptions  {
                             for item in subscription.get_items().await? {
                                 items.push(item);
                             }

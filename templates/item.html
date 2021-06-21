@@ -1,21 +1,27 @@
 <div
-  hx-get="/item/item.id.unwrap_or_default()"
-  class="article margins-off"
+  class="article margins-off shadowed padded"
   id="article-{{item.id.unwrap_or_default()}}"
+  _="on click toggle .opened"
 >
-  <div class="subscription">{{subscription.title | capitalize}}</div>
-  <div class="title margin">
-    <a href="{{item.link}}">{{item.title | capitalize}}</a>
+  <div class="article__subscription ellipsis">
+    {{subscription.title | capitalize}}
   </div>
-  <div class="comments">
+  <div class="article__comments">
     {% match item.comments %} {% when Some with (comments) %}
     <a href="{{comments}}">comments</a>
-    {% when None %} {% endmatch %}
+    {% when None %}N/A {% endmatch %}
+  </div>
+  <div class="article__title margin ellipsis">
+    <a href="{{item.link}}">{{item.title | capitalize}}</a>
   </div>
   {% match item.description %} {% when Some with (description) %}
-  <div class="description">{{description|ammonia|safe}}</div>
+  <div class="article__description shadowed padded hidden_till_opened">
+    {{description|ammonia|safe}}
+  </div>
   {% when None %} {% endmatch %} {% match item.contents %} {% when Some with
   (contents) %} contents
-  <div class="contents">{{contents|ammonia|safe}}</div>
+  <div class="article__contents shadowed padded hidden_till_opened">
+    {{contents|ammonia|safe}}
+  </div>
   {% when None %} {% endmatch %}
 </div>

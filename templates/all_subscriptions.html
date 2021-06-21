@@ -1,5 +1,17 @@
-<div id="all-subscriptions">
-  <div id="sidebar">
+<div
+  id="all-subscriptions"
+  class="margins-off"
+  style="
+    display: grid;
+    background-color: lightgrey;
+    grid-template-columns: 15em auto;
+  "
+>
+  <div
+    id="sidebar"
+    class="padded"
+    style="background-color: #294973; color: #d7dde4"
+  >
     <div class="header">
       <input type="text" placeholder="Search" autocomplete="off" />
     </div>
@@ -12,7 +24,13 @@
     </div>
     {% endfor %}
   </div>
-  <div id="articles">
-    {% for item in items %} {% include "item_lite.html" %} {% endfor %}
+  <div
+    id="articles"
+    class="padded"
+    style="max-height: 100%; overflow-y: auto; overflow-x: hidden"
+  >
+    {% for item in items %} {% let subscription =
+    subscription_map.get(item.subscription_id).unwrap()%} {% include "item.html"
+    %} {% endfor %}
   </div>
 </div>
