@@ -87,7 +87,7 @@ fn install_tracing() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let fmt_layer = fmt::layer().with_target(false);
-    let filter_layer = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("rss::info,warn"))?;
+    let filter_layer = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("rss=info,warn"))?;
 
     tracing_subscriber::registry()
         .with(filter_layer)

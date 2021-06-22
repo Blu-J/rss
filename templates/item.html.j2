@@ -1,8 +1,8 @@
 <div
   class="article margins-off shadowed padded"
   id="article-{{ item.id }}"
-  hx_swap="outerHTML"
-  hx_get="/partial/items/{{item.id}}"
+  hx-swap="outerHTML"
+  hx-get="/partial/item/{{item.id}}"
 >
   <div class="article__subscription ellipsis">
     {{ subscription.title|capitalize }}
@@ -21,14 +21,14 @@
   {% if show_expanded %} 
     {% match item.description %} 
       {% when Some with (description) %}
-        <div class="article__description shadowed padded hidden_till_opened">
+        <div class="article__description shadowed padded">
           {{ description|ammonia|safe }}
         </div>
       {% when None %}
     {% endmatch %} 
     {% match item.contents %}
       {% when Some with (contents) %}     
-        <div class="article__contents shadowed padded hidden_till_opened">
+        <div class="article__contents shadowed padded">
           {{ contents|ammonia|safe }}
         </div>
       {% when None %} 

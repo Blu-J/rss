@@ -18,9 +18,9 @@ impl UserSubscription {
         user_id: &UserId,
         id: i64,
         executor: impl Executor<'a, Database = Sqlite>,
-    ) -> Result<Option<Self>> {
-        let answer = query_file_as!(Self, "queries/user_subscription_fetch.sql", id, user_id)
-            .fetch_optional(executor)
+    ) -> Result<Self> {
+        let answer = query_file_as!(Self, "queries/user_subscription_fetch.sql", user_id, id,)
+            .fetch_one(executor)
             .await?;
         Ok(answer)
     }

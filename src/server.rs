@@ -159,11 +159,10 @@ pub async fn get_full_item_part(
     let item = dto::Item::fetch(*id, &clients.pool)
         .await?
         .ok_or_else(|| MyError::Missing("Item".to_string()))?;
-    let subscription = dto::UserSubscription::fetch(&user_id, item.subscription_id, &clients.pool)
-        .await?
-        .ok_or_else(|| MyError::Missing("Subscription".to_string()))?;
+    let subscription =
+        dto::UserSubscription::fetch(&user_id, item.subscription_id, &clients.pool).await?;
     let index = TemplateFullItem {
-        show_expanded: false,
+        show_expanded: true,
         subscription: &&subscription,
         item: &item,
     };
@@ -180,9 +179,8 @@ pub async fn get_full_item(
     let item = dto::Item::fetch(*id, &clients.pool)
         .await?
         .ok_or_else(|| MyError::Missing("Item".to_string()))?;
-    let subscription = dto::UserSubscription::fetch(&user_id, item.subscription_id, &clients.pool)
-        .await?
-        .ok_or_else(|| MyError::Missing("Subscription".to_string()))?;
+    let subscription =
+        dto::UserSubscription::fetch(&user_id, item.subscription_id, &clients.pool).await?;
     let index = wrap_body(TemplateFullItem {
         show_expanded: true,
         subscription: &&subscription,
