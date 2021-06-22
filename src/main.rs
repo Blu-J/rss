@@ -1,10 +1,6 @@
 use std::{ops::Sub, time::Duration};
 
-use crate::{
-    clients::Clients,
-    models::{DbItem, DbSubscription},
-    server::spawn_server,
-};
+use crate::{clients::Clients, server::spawn_server};
 use actix_web::rt::{
     signal::{
         ctrl_c,
@@ -16,14 +12,14 @@ use actix_web::rt::{
 
 use chrono::Utc;
 use color_eyre::Report;
-use futures::{select, FutureExt};
+use futures::{select, stream, FutureExt, StreamExt};
 use lazy_static::lazy_static;
 
 use settings::Settings;
-use tracing::info;
+use tracing::{error, info, warn};
 
 pub mod clients;
-pub mod models;
+pub mod dto;
 pub mod server;
 pub mod settings;
 
@@ -40,34 +36,39 @@ async fn main() -> color_eyre::Result<()> {
     let server = spawn_server(clients.clone());
     let task2 = spawn(async move {
         async {
-            let mut items: Vec<DbItem> = Vec::with_capacity(10);
             let mut sigup = signal(SignalKind::hangup())?;
             loop {
-                select! {
-                _ = timeout(Duration::from_secs(30), async {
-                        items.truncate(0);
+                match select! {
+                    x = timeout(Duration::from_secs(60), async {
                         let start = Utc::now();
-                        let mut subscriptions = DbSubscription::fetch_all(&clients.pool).await?;
-                        subscriptions.reverse();
-                        for subscription in subscriptions  {
-                            for item in subscription.get_items().await? {
-                                items.push(item);
+                        let items_to_insert: Vec<_> = stream::iter(dto::Subscription::fetch_all(&clients.pool).await?.into_iter().map(|subscription| async move{
+                            Ok::<_, Report>(subscription.get_items().await?)
+                        })).buffer_unordered(10).filter_map(|x| async {match x {
+                            Ok(x) => Some(x),
+                            Err(e) => {
+                                warn!("Ran into issues getting rss: {:?}", e);
+                                None 
                             }
-                        }
+                        }}).concat().await;
+                        
                         let mut transaction = clients.pool.begin().await?;
-                        for item in items.iter() {
+                        for item in items_to_insert.iter() {
                             item.insert(&mut transaction).await?;
                         }
                         transaction.commit().await?;
                         let duration = Utc::now().sub(start);
-                        info!("Time to insert {} items: {}", items.len(), duration);
-                        time::sleep(Duration::from_secs(10)).await;
+                        info!("Time to insert {} items: {}", items_to_insert.len(), duration);
 
+                        time::sleep(Duration::from_secs(10)).await;
                         Ok::<_, Report>(())
-                    }).fuse() => (),
+                    }).fuse() => x,
                     _ = ctrl_c().fuse() => break,
                     _ = sigup.recv().fuse() => break,
-                }
+                } { 
+                    Err(e) => {error!("Item Insert Daemon timeout: {:?}", e);},
+                    Ok(Err(e)) => {error!("Item Insert Daemon error: {:?}", e);},
+                    _ => ()
+                };
             }
 
             Ok::<_, Report>(())
@@ -86,7 +87,7 @@ fn install_tracing() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let fmt_layer = fmt::layer().with_target(false);
-    let filter_layer = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?;
+    let filter_layer = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("rss::info,warn"))?;
 
     tracing_subscriber::registry()
         .with(filter_layer)

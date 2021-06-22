@@ -1,9 +1,7 @@
 use std::{collections::HashMap, fmt::Display};
 
-use crate::{
-    clients::Clients,
-    models::{DbItem, DbSubscription},
-};
+use crate::{clients::Clients, dto};
+// use actix_session::CookieSession;
 use actix_web::{
     body::Body, error, get, http::StatusCode, middleware, post, rt::spawn, web, App, HttpResponse,
     HttpServer,
@@ -57,6 +55,52 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
     })
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct FormLogin {
+    username: String,
+    password: String,
+}
+
+#[post("/login")]
+#[instrument(skip(_clients))]
+pub async fn login_post(
+    _clients: web::Data<Clients>,
+    _form: web::Form<FormLogin>,
+) -> Result<HttpResponse, MyError> {
+    // info!("Starting a new subscription {:?}", path);
+    // let SubscriptionForm {
+    //     category,
+    //     title,
+    //     url,
+    // } = path.into_inner();
+
+    // let content = reqwest::get(url.clone())
+    //     .await
+    //     .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?
+    //     .bytes()
+    //     .await
+    //     .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?;
+    // let channel = Channel::read_from(&content[..])
+    //     .map_err(|x| MyError::InvalidSubscription(url.clone(), x.to_string()))?;
+    // let rss_feed = format!("{}", url);
+    // let subscription = dto::Subscription::insert(&&rss_feed, &clients.pool).await?;
+    // let subscription = dto::UserSubscription::insert(&&rss_feed, &clients.pool).await?;
+    // let subscription = dto::UserSubscription {
+    //     id: None,
+    //     title,
+    //     rss_feed: format!("{}", url),
+    //     category,
+    //     unreads: None,
+    // };
+    // subscription
+    //     .insert(&clients.pool)
+    //     .await
+    //     .map_err(MyError::Internal)?;
+    // info!("{:?}", subscription);
+    // info!("{:#?}", channel);
+    Ok(HttpResponse::Ok().json("Ok"))
+}
+
 #[post("/subscriptions")]
 #[instrument(skip(clients))]
 pub async fn new_subscription(
@@ -70,44 +114,36 @@ pub async fn new_subscription(
         url,
     } = path.into_inner();
 
+    let user_id = dto::UserId(1);
+
     let content = reqwest::get(url.clone())
         .await
         .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?
         .bytes()
         .await
         .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?;
-    let channel = Channel::read_from(&content[..])
+    let _channel = Channel::read_from(&content[..])
         .map_err(|x| MyError::InvalidSubscription(url.clone(), x.to_string()))?;
+    let rss_feed = format!("{}", url);
+    let subscription = dto::Subscription::insert(&rss_feed, &clients.pool).await?;
+    let _user_subscription =
+        dto::UserSubscription::insert(&category, &title, &subscription, &user_id, &clients.pool)
+            .await?;
 
-    let subscription = DbSubscription {
-        id: None,
-        title,
-        rss_feed: format!("{}", url),
-        category,
-        unreads: None,
-    };
-    subscription
-        .insert(&clients.pool)
-        .await
-        .map_err(MyError::Internal)?;
-    info!("{:?}", subscription);
-    info!("{:#?}", channel);
     Ok(HttpResponse::Ok().json("Ok"))
 }
 
 #[get("/")]
 #[instrument(skip(clients))]
 pub async fn get_all_subscriptions(clients: web::Data<Clients>) -> Result<HttpResponse, MyError> {
-    let subscriptions = DbSubscription::fetch_all(&clients.pool).await?;
-    let subscription_map: HashMap<_, _> = subscriptions
-        .iter()
-        .filter_map(|x| Some((x.id?, x)))
-        .collect();
-    let items = DbItem::fetch_all(&clients.pool).await?;
+    let user_id = dto::UserId(1);
+    let subscriptions = dto::UserSubscription::fetch_all(&user_id, &clients.pool).await?;
+    let subscription_map: HashMap<_, _> = subscriptions.iter().map(|x| (x.id, x)).collect();
+    let items = dto::Item::fetch_all_not_read(&user_id, &clients.pool).await?;
     let index = wrap_body(AllSubscriptions {
-        subscriptions: &subscriptions,
+        subscriptions: subscriptions.iter().collect(),
         subscription_map,
-        items,
+        items: items.iter().collect(),
     });
     let body = index.render().unwrap();
     Ok(HttpResponse::Ok().content_type("text/html").body(body))
@@ -119,13 +155,18 @@ pub async fn get_full_item_part(
     clients: web::Data<Clients>,
     id: web::Path<i64>,
 ) -> Result<HttpResponse, MyError> {
-    let item = DbItem::fetch(*id, &clients.pool)
+    let user_id = dto::UserId(1);
+    let item = dto::Item::fetch(*id, &clients.pool)
         .await?
         .ok_or_else(|| MyError::Missing("Item".to_string()))?;
-    let subscription = DbSubscription::fetch(item.subscription_id, &clients.pool)
+    let subscription = dto::UserSubscription::fetch(&user_id, item.subscription_id, &clients.pool)
         .await?
         .ok_or_else(|| MyError::Missing("Subscription".to_string()))?;
-    let index = TemplateFullItem { subscription, item };
+    let index = TemplateFullItem {
+        show_expanded: false,
+        subscription: &&subscription,
+        item: &item,
+    };
     let body = index.render().unwrap();
     Ok(HttpResponse::Ok().content_type("text/html").body(body))
 }
@@ -135,36 +176,42 @@ pub async fn get_full_item(
     clients: web::Data<Clients>,
     id: web::Path<i64>,
 ) -> Result<HttpResponse, MyError> {
-    let item = DbItem::fetch(*id, &clients.pool)
+    let user_id = dto::UserId(1);
+    let item = dto::Item::fetch(*id, &clients.pool)
         .await?
         .ok_or_else(|| MyError::Missing("Item".to_string()))?;
-    let subscription = DbSubscription::fetch(item.subscription_id, &clients.pool)
+    let subscription = dto::UserSubscription::fetch(&user_id, item.subscription_id, &clients.pool)
         .await?
         .ok_or_else(|| MyError::Missing("Subscription".to_string()))?;
-    let index = wrap_body(TemplateFullItem { subscription, item });
+    let index = wrap_body(TemplateFullItem {
+        show_expanded: true,
+        subscription: &&subscription,
+        item: &item,
+    });
     let body = index.render().unwrap();
     Ok(HttpResponse::Ok().content_type("text/html").body(body))
 }
 
 #[derive(Template, Debug, Clone)]
-#[template(path = "full_body.html")]
+#[template(path = "full_body.html.j2")]
 struct FullBody<A: Template + Display> {
     wrapped: A,
 }
 
 #[derive(Template, Debug, Clone)]
-#[template(path = "all_subscriptions.html")]
+#[template(path = "all_subscriptions.html.j2")]
 struct AllSubscriptions<'a> {
-    subscriptions: &'a Vec<DbSubscription>,
-    subscription_map: HashMap<i64, &'a DbSubscription>,
-    items: Vec<DbItem>,
+    subscriptions: Vec<&'a dto::UserSubscription>,
+    subscription_map: HashMap<i64, &'a dto::UserSubscription>,
+    items: Vec<&'a dto::Item>,
 }
 
 #[derive(Template, Debug, Clone)]
-#[template(path = "item.html")]
-struct TemplateFullItem {
-    item: DbItem,
-    subscription: DbSubscription,
+#[template(path = "item.html.j2")]
+struct TemplateFullItem<'a> {
+    item: &'a dto::Item,
+    subscription: &'a dto::UserSubscription,
+    show_expanded: bool,
 }
 fn wrap_body<A: Template + Display>(wrapped: A) -> FullBody<A> {
     FullBody { wrapped }

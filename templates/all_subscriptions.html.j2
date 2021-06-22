@@ -18,10 +18,9 @@
     <div class="Subscriptions"></div>
 
     {% for subscription in subscriptions %}
-    <div class="subscription_category">
-      {{subscription.title | capitalize}}
-      {{subscription.unreads.unwrap_or_default()}}
-    </div>
+      <div class="subscription_category">
+        {{subscription.title|capitalize}} {{subscription.items_not_read}}
+      </div>
     {% endfor %}
   </div>
   <div
@@ -29,8 +28,10 @@
     class="padded"
     style="max-height: 100%; overflow-y: auto; overflow-x: hidden"
   >
-    {% for item in items %} {% let subscription =
-    subscription_map.get(item.subscription_id).unwrap()%} {% include "item.html"
-    %} {% endfor %}
+    {% for item in items %} 
+      {% let subscription = subscription_map.get(item.subscription_id).expect(format!("{}",item.subscription_id))%}
+      {% let show_expanded =false%} 
+      {% include "item.html.j2" %}
+    {% endfor %}
   </div>
 </div>

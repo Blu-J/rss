@@ -1,32 +1,27 @@
 use std::time::SystemTime;
 
-use color_eyre::{eyre::bail, Result};
+use color_eyre::Result;
 use rss::Channel;
-use sqlx::{query, query_file_as, Executor, Sqlite};
+use sqlx::{query_as, query_file_as, Executor, Sqlite};
+use tracing::instrument;
 
-use super::DbItem;
+use super::ItemInsert;
 
 #[derive(Debug, Clone)]
-pub struct DbSubscription {
-    pub id: Option<i64>,
-    pub unreads: Option<i64>,
-    pub title: String,
-    pub category: String,
+pub struct Subscription {
+    pub id: i64,
     pub rss_feed: String,
 }
-impl DbSubscription {
-    pub async fn get_items<'a>(&self) -> Result<Vec<DbItem>> {
-        let subscription_id = match self.id {
-            None => bail!("Expecting that the id is there"),
-            Some(x) => x,
-        };
+impl Subscription {
+    #[instrument]
+    pub async fn get_items<'a>(&self) -> Result<Vec<ItemInsert>> {
+        let subscription_id = self.id;
         let content = reqwest::get(self.rss_feed.clone()).await?.bytes().await?;
         let channel = Channel::read_from(&content[..])?;
         let items = channel
             .items
             .into_iter()
-            .map(|item| DbItem {
-                id: None,
+            .map(|item| ItemInsert {
                 subscription_id,
                 title: item.title.unwrap_or_default(),
                 link: item.link.unwrap_or_default(),
@@ -48,15 +43,14 @@ impl DbSubscription {
         Ok(items)
     }
 
-    pub async fn fetch<'a>(
-        id: i64,
-        executor: impl Executor<'a, Database = Sqlite>,
-    ) -> Result<Option<Self>> {
-        let answer = query_file_as!(Self, "queries/subscription_fetch.sql", id)
-            .fetch_optional(executor)
+    #[instrument(skip(executor))]
+    pub async fn fetch<'a>(executor: impl Executor<'a, Database = Sqlite>) -> Result<Self> {
+        let answer = query_file_as!(Self, "queries/subscription_fetch_all.sql")
+            .fetch_one(executor)
             .await?;
         Ok(answer)
     }
+    #[instrument(skip(executor))]
     pub async fn fetch_all<'a>(
         executor: impl Executor<'a, Database = Sqlite>,
     ) -> Result<Vec<Self>> {
@@ -65,15 +59,19 @@ impl DbSubscription {
             .await?;
         Ok(answer)
     }
-    pub async fn insert<'a>(&self, executor: impl Executor<'a, Database = Sqlite>) -> Result<()> {
-        query!(
-            r#"INSERT INTO subscriptions ( category, title, rss_feed) VALUES (?, ?, ?) ON CONFLICT DO NOTHING"#,
-            self.category,
-            self.title,
-            self.rss_feed
+    pub async fn insert<'a>(
+        rss_feed: &str,
+        executor: impl Executor<'a, Database = Sqlite>,
+    ) -> Result<Self> {
+        let answer = query_as!(
+            Self,
+            r#"INSERT INTO subscriptions (rss_feed) VALUES ($1) ON CONFLICT DO NOTHING;
+            SELECT id, rss_feed FROM subscriptions WHERE rss_feed = $1;"#,
+            rss_feed,
+            rss_feed
         )
-        .execute(executor)
+        .fetch_one(executor)
         .await?;
-        Ok(())
+        Ok(answer)
     }
 }

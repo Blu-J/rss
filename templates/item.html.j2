@@ -1,0 +1,37 @@
+<div
+  class="article margins-off shadowed padded"
+  id="article-{{ item.id }}"
+  hx_swap="outerHTML"
+  hx_get="/partial/items/{{item.id}}"
+>
+  <div class="article__subscription ellipsis">
+    {{ subscription.title|capitalize }}
+  </div>
+  <div class="article__comments">
+    {% match item.comments %} 
+      {% when Some with (comments) %}
+        <a href="{{ comments }}">comments</a>
+      {% when None %}
+        N/A 
+    {% endmatch %}
+  </div>
+  <div class="article__title margin ellipsis">
+    <a href="{{ item.link }}">{{ item.title|capitalize }}</a>
+  </div>
+  {% if show_expanded %} 
+    {% match item.description %} 
+      {% when Some with (description) %}
+        <div class="article__description shadowed padded hidden_till_opened">
+          {{ description|ammonia|safe }}
+        </div>
+      {% when None %}
+    {% endmatch %} 
+    {% match item.contents %}
+      {% when Some with (contents) %}     
+        <div class="article__contents shadowed padded hidden_till_opened">
+          {{ contents|ammonia|safe }}
+        </div>
+      {% when None %} 
+    {% endmatch %} 
+  {% endif %}
+</div>

@@ -1,7 +1,4 @@
-SELECT s.id as "id?",
-    title,
-    category,
-    rss_feed,
-    null as "unreads?:i64"
+SELECT s.id,
+    s.rss_feed
 FROM subscriptions s
-WHERE id = ?;
+WHERE s.id = $1;
