@@ -1,17 +1,17 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, sync::Arc};
 
 use crate::{clients::Clients, dto};
 // use actix_session::CookieSession;
 use actix_web::{
-    body::Body, error, get, http::StatusCode, middleware, post, rt::spawn, web, App, HttpResponse,
-    HttpServer,
+    body::Body, cookie::Cookie, dev::Payload, error, get, http::StatusCode, middleware, post,
+    rt::spawn, web, App, FromRequest, HttpRequest, HttpResponse, HttpServer,
 };
 use askama::Template;
-
-use color_eyre::Report;
-
+use color_eyre::{eyre::eyre, Report};
+use futures::{future::LocalBoxFuture, FutureExt};
 use rss::Channel;
 use serde::Deserialize;
+use tokio::sync::Mutex;
 use tracing::{info, instrument, warn};
 
 use uuid::Uuid;
@@ -33,18 +33,24 @@ pub enum MyError {
     Internal(#[from] Report),
     #[error("Missing {}", .0)]
     Missing(String),
+    #[error("User Not Logged in")]
+    NotLoggedIn(Report),
 }
 
 pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
     spawn(async move {
+        let sessions: SessionMap = Default::default();
         HttpServer::new(move || {
             App::new()
                 .data(clients.clone())
+                .data(sessions.clone())
                 .wrap(middleware::Compress::default())
                 .service(new_subscription)
                 .service(actix_files::Files::new("/static", "./static").show_files_listing())
                 .service(get_all_subscriptions)
                 .service(get_full_item)
+                .service(login_get)
+                .service(login_post)
                 .service(get_full_item_part)
         })
         .bind("0.0.0.0:8080")
@@ -61,12 +67,22 @@ pub struct FormLogin {
     password: String,
 }
 
+#[derive(Template, Debug, Clone)]
+#[template(path = "login.j2")]
+struct TemplateLogin;
+#[get("/login")]
+#[instrument]
+pub async fn login_get() -> Result<HttpResponse, MyError> {
+    let index = wrap_body(TemplateLogin);
+    let body = index.render().unwrap();
+    Ok(HttpResponse::Ok().content_type("text/html").body(body))
+}
 #[post("/login")]
-#[instrument(skip(_clients))]
-pub async fn login_post(
-    _clients: web::Data<Clients>,
-    _form: web::Form<FormLogin>,
-) -> Result<HttpResponse, MyError> {
+#[instrument(skip())]
+pub async fn login_post(session_maps: web::Data<SessionMap>) -> Result<HttpResponse, MyError> {
+    let mut session_map = session_maps.lock().await;
+    let ssid = Uuid::new_v4().to_string();
+    session_map.insert(ssid.clone(), dto::UserId(1));
     // info!("Starting a new subscription {:?}", path);
     // let SubscriptionForm {
     //     category,
@@ -98,7 +114,16 @@ pub async fn login_post(
     //     .map_err(MyError::Internal)?;
     // info!("{:?}", subscription);
     // info!("{:#?}", channel);
-    Ok(HttpResponse::Ok().json("Ok"))
+    Ok(HttpResponse::TemporaryRedirect()
+        .cookie(
+            Cookie::build("ssid", ssid)
+                .path("/")
+                .secure(true)
+                .http_only(true)
+                .finish(),
+        )
+        .append_header(("Location", "/"))
+        .json("Ok"))
 }
 
 #[post("/subscriptions")]
@@ -135,8 +160,10 @@ pub async fn new_subscription(
 
 #[get("/")]
 #[instrument(skip(clients))]
-pub async fn get_all_subscriptions(clients: web::Data<Clients>) -> Result<HttpResponse, MyError> {
-    let user_id = dto::UserId(1);
+pub async fn get_all_subscriptions(
+    clients: web::Data<Clients>,
+    User(user_id): User,
+) -> Result<HttpResponse, MyError> {
     let subscriptions = dto::UserSubscription::fetch_all(&user_id, &clients.pool).await?;
     let subscription_map: HashMap<_, _> = subscriptions.iter().map(|x| (x.id, x)).collect();
     let items = dto::Item::fetch_all_not_read(&user_id, &clients.pool).await?;
@@ -154,8 +181,8 @@ pub async fn get_all_subscriptions(clients: web::Data<Clients>) -> Result<HttpRe
 pub async fn get_full_item_part(
     clients: web::Data<Clients>,
     id: web::Path<i64>,
+    User(user_id): User,
 ) -> Result<HttpResponse, MyError> {
-    let user_id = dto::UserId(1);
     let item = dto::Item::fetch(*id, &clients.pool)
         .await?
         .ok_or_else(|| MyError::Missing("Item".to_string()))?;
@@ -174,8 +201,8 @@ pub async fn get_full_item_part(
 pub async fn get_full_item(
     clients: web::Data<Clients>,
     id: web::Path<i64>,
+    User(user_id): User,
 ) -> Result<HttpResponse, MyError> {
-    let user_id = dto::UserId(1);
     let item = dto::Item::fetch(*id, &clients.pool)
         .await?
         .ok_or_else(|| MyError::Missing("Item".to_string()))?;
@@ -237,9 +264,10 @@ impl error::ResponseError for MyError {
 
     fn status_code(&self) -> StatusCode {
         match *self {
-            MyError::BadParam(_, _) | MyError::InvalidSubscription(_, _) | MyError::Internal(_) => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
+            MyError::BadParam(_, _)
+            | MyError::InvalidSubscription(_, _)
+            | MyError::NotLoggedIn(_)
+            | MyError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             MyError::Missing(_) => StatusCode::NOT_FOUND,
         }
     }
@@ -253,5 +281,35 @@ mod filters {
             .set_tag_attribute_value("img", "loading", "lazy")
             .clean(s)
             .to_string())
+    }
+}
+
+type SessionMap = Arc<Mutex<HashMap<String, dto::UserId>>>;
+
+#[derive(Debug, Clone)]
+pub struct User(pub dto::UserId);
+
+impl<'a> FromRequest for User {
+    type Error = MyError;
+    type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
+    type Config = ();
+
+    #[inline]
+    fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
+        let ssid = dbg!(req.cookie("ssid"));
+        let value = web::Data::<SessionMap>::from_request(req, payload)
+            .then(|session_map| async move {
+                let session = ssid.ok_or_else(|| eyre!("Need to have a SSID cookie"))?;
+                let session = session.value();
+                let sessions_data = session_map.map_err(|_| eyre!("Could not extract sessions"))?;
+                let sessions = sessions_data.lock().await;
+                let user_id = sessions
+                    .get(&session.to_string())
+                    .ok_or_else(|| eyre!("No cookie in sessions"))?;
+
+                Ok(Self(user_id.clone()))
+            })
+            .map(|x| x.map_err(MyError::NotLoggedIn));
+        Box::pin(value)
     }
 }
