@@ -7,7 +7,6 @@ use super::{Subscription, UserId};
 #[derive(Debug, Clone)]
 pub struct UserSubscription {
     pub id: i64,
-    pub items_not_read: i64,
     pub title: String,
     pub category: String,
     pub rss_feed: String,

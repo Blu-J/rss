@@ -1,15 +1,17 @@
-
-
-use crate::{clients::Clients, dto::{ User}, session::{SessionMap, Session}};
-use actix_web::{HttpResponse, cookie::Cookie, get, http::header::ContentType, post, web};
+use crate::{
+    clients::Clients,
+    dto::User,
+    session::{Session, SessionMap},
+};
+use actix_web::{cookie::Cookie, get, http::header::ContentType, post, web, HttpResponse};
 use askama::Template;
 use color_eyre::eyre::eyre;
 use serde::Deserialize;
-use tracing::{ instrument};
+use tracing::instrument;
 
 use uuid::Uuid;
 
-use super::{MyError, wrap_body};
+use super::{wrap_body, MyError};
 
 #[derive(Clone, Deserialize)]
 pub struct LoginForm {
@@ -20,9 +22,9 @@ pub struct LoginForm {
 impl std::fmt::Debug for LoginForm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FormLogin")
-         .field("username", &self.username)
-         .field("password", &"redacted")
-         .finish()
+            .field("username", &self.username)
+            .field("password", &"redacted")
+            .finish()
     }
 }
 
@@ -41,9 +43,12 @@ pub async fn login_get() -> Result<HttpResponse, MyError> {
 pub async fn login_post(
     session_maps: web::Data<SessionMap>,
     login_form: web::Form<LoginForm>,
-     clients: web::Data<Clients>) -> Result<HttpResponse, MyError> {
+    clients: web::Data<Clients>,
+) -> Result<HttpResponse, MyError> {
     let mut session_map = session_maps.lock().await;
-    let user = User::fetch(&clients.pool, &login_form.username).await.map_err(MyError::CannotFind)?;
+    let user = User::fetch(&clients.pool, &login_form.username)
+        .await
+        .map_err(MyError::CannotFind)?;
 
     if !user.passwords_match(&login_form.password) {
         return Err(MyError::CannotFind(eyre!("Cannot find")));

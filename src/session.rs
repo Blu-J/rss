@@ -13,8 +13,12 @@ pub struct Session {
 }
 
 impl Session {
-    pub fn new(user_id: UserId) -> Self { Self { user_id, date: SystemTime::now() } }
-    
+    pub fn new(user_id: UserId) -> Self {
+        Self {
+            user_id,
+            date: SystemTime::now(),
+        }
+    }
 
     /// Get a reference to the session's user id.
     pub fn user_id(&self) -> &UserId {

@@ -1,22 +1,26 @@
-use std::{fmt::Display};
+use self::{
+    actions::action_mark_all_read,
+    items::{get_full_item, get_full_item_part},
+    subscriptions::{get_all_subscriptions, new_subscription},
+};
 use crate::{clients::Clients, dto, session::SessionMap};
 use actix_web::{
-    body::Body,  dev::Payload, error,  http::StatusCode, middleware, 
-    rt::spawn, web, App, FromRequest, HttpRequest, HttpResponse, HttpServer,
+    body::Body, dev::Payload, error, http::StatusCode, middleware, rt::spawn, web, App,
+    FromRequest, HttpRequest, HttpResponse, HttpServer,
 };
 use askama::Template;
 use color_eyre::{eyre::eyre, Report};
 use futures::{future::LocalBoxFuture, FutureExt};
-use tracing::{  warn};
-use uuid::Uuid;
 use login::{login_get, login_post};
-use self::{actions::action_mark_all_read, items::{get_full_item, get_full_item_part}, subscriptions::{get_all_subscriptions, new_subscription}};
+use std::fmt::Display;
+use tracing::warn;
+use uuid::Uuid;
 
-mod login;
-mod items;
-mod subscriptions;
-mod filters;
 mod actions;
+mod filters;
+mod items;
+mod login;
+mod subscriptions;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MyError {
@@ -45,8 +49,8 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .service(login_get)
                 .service(login_post)
                 // .wrap_fn(|req, service| {
-                //     let (r, mut pl) = req.into_parts(); 
-                //     let token = auto_login(&r, &mut pl); 
+                //     let (r, mut pl) = req.into_parts();
+                //     let token = auto_login(&r, &mut pl);
                 //     let req = ServiceRequest::from_parts(r, pl).ok().unwrap(); <-- repack
                 //     if token.is_some() {
                 //         Either::Left(service.call(req))
@@ -89,7 +93,6 @@ impl error::ResponseError for MyError {
         warn!("actix response: {:?}", self);
         match self {
             MyError::CannotFind(x) => {
-
                 let uuid = Uuid::new_v4();
                 warn!("Cannot Find ({}): {:?}", uuid, x);
                 HttpResponse::with_body(
@@ -97,8 +100,8 @@ impl error::ResponseError for MyError {
                     Body::from_message(format!("internal error {}", uuid)),
                 )
                 .into()
-            },
-            MyError::Internal(x)=> {
+            }
+            MyError::Internal(x) => {
                 let uuid = Uuid::new_v4();
                 warn!("Internal Error ({}): {:?}", uuid, x);
                 HttpResponse::with_body(
@@ -124,8 +127,6 @@ impl error::ResponseError for MyError {
         }
     }
 }
-
-
 
 #[derive(Debug, Clone)]
 pub struct UserIdPart(pub dto::UserId);

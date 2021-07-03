@@ -22,7 +22,7 @@
       </div>
     {% for subscription in subscriptions %}
       <div class="subscription_category">
-        {{subscription.title|capitalize}} {{subscription.items_not_read}}
+        {{subscription.title|capitalize}} {{subscriptions_read.get(subscription.id).unwrap_or(0)}}
       </div>
     {% endfor %}
   </div>

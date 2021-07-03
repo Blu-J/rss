@@ -21,8 +21,8 @@ use tracing::{error, info, warn};
 pub mod clients;
 pub mod dto;
 pub mod server;
-pub mod settings;
 pub mod session;
+pub mod settings;
 
 lazy_static! {
     pub static ref CONFIG: Settings = Settings::new().unwrap();
@@ -48,10 +48,9 @@ async fn main() -> color_eyre::Result<()> {
                             Ok(x) => Some(x),
                             Err(e) => {
                                 warn!("Ran into issues getting rss: {:?}", e);
-                                None 
+                                None
                             }
                         }}).concat().await;
-                        
                         let mut transaction = clients.pool.begin().await?;
                         for item in items_to_insert.iter() {
                             item.insert(&mut transaction).await?;
@@ -65,7 +64,7 @@ async fn main() -> color_eyre::Result<()> {
                     }).fuse() => x,
                     _ = ctrl_c().fuse() => break,
                     _ = sigup.recv().fuse() => break,
-                } { 
+                } {
                     Err(e) => {error!("Item Insert Daemon timeout: {:?}", e);},
                     Ok(Err(e)) => {error!("Item Insert Daemon error: {:?}", e);},
                     _ => ()
@@ -88,7 +87,8 @@ fn install_tracing() -> color_eyre::Result<()> {
     color_eyre::install()?;
 
     let fmt_layer = fmt::layer().with_target(false);
-    let filter_layer = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("rss=info,warn"))?;
+    let filter_layer =
+        EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("rss=info,warn"))?;
 
     tracing_subscriber::registry()
         .with(filter_layer)

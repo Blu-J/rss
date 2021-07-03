@@ -1,12 +1,12 @@
 use color_eyre::Result;
-use sqlx::{Executor, Sqlite,  query_as};
-use sha3::{Sha3_256, Digest};
+use sha3::{Digest, Sha3_256};
+use sqlx::{query_as, Executor, Sqlite};
 use tracing::instrument;
 
 use super::UserId;
 
 #[derive(Debug, Clone)]
-pub struct User{
+pub struct User {
     id: UserId,
     salt: String,
     username: String,
@@ -27,7 +27,8 @@ impl User {
         executor: impl Executor<'a, Database = Sqlite>,
         username: &str,
     ) -> Result<Self> {
-        let record = query_as!(Self,
+        let record = query_as!(
+            Self,
             r#"SELECT id as 'id:UserId', salt, salted_password, username
             FROM users
             WHERE username = $1"#,
@@ -38,12 +39,11 @@ impl User {
         Ok(record)
     }
 
-    pub fn username(&self) -> &str{
+    pub fn username(&self) -> &str {
         &self.username
     }
 
     pub fn passwords_match(&self, password: &str) -> bool {
-
         let mut hasher = Sha3_256::new();
 
         // write input message
@@ -51,8 +51,7 @@ impl User {
 
         // read hash digest
         let result = hasher.finalize();
-        
+
         &self.salted_password == &hex::encode(result.as_slice())
     }
-
 }
