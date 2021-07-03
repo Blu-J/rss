@@ -2,7 +2,7 @@
   class="article margins-off shadowed padded"
   id="article-{{ item.id }}"
   hx-swap="outerHTML"
-  hx-get="/partial/item/{{item.id}}"
+  hx-get="/items/partial/{{item.id}}"
 >
   <div class="article__subscription ellipsis">
     {{ subscription.title|capitalize }}

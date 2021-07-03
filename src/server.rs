@@ -1,27 +1,23 @@
 use std::{collections::HashMap, fmt::Display, sync::Arc};
-
 use crate::{clients::Clients, dto};
 // use actix_session::CookieSession;
 use actix_web::{
-    body::Body, cookie::Cookie, dev::Payload, error, get, http::StatusCode, middleware, post,
+    body::Body,  dev::Payload, error,  http::StatusCode, middleware, 
     rt::spawn, web, App, FromRequest, HttpRequest, HttpResponse, HttpServer,
 };
 use askama::Template;
 use color_eyre::{eyre::eyre, Report};
 use futures::{future::LocalBoxFuture, FutureExt};
-use rss::Channel;
-use serde::Deserialize;
 use tokio::sync::Mutex;
-use tracing::{info, instrument, warn};
-
+use tracing::{  warn};
 use uuid::Uuid;
+use login::{login_get, login_post};
+use self::{items::{get_full_item, get_full_item_part}, subscriptions::{get_all_subscriptions, new_subscription}};
 
-#[derive(Debug, Deserialize, Clone)]
-pub struct SubscriptionForm {
-    category: String,
-    title: String,
-    url: String,
-}
+mod login;
+mod items;
+mod subscriptions;
+mod filters;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MyError {
@@ -61,183 +57,12 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
     })
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct FormLogin {
-    username: String,
-    password: String,
-}
-
-#[derive(Template, Debug, Clone)]
-#[template(path = "login.j2")]
-struct TemplateLogin;
-#[get("/login")]
-#[instrument]
-pub async fn login_get() -> Result<HttpResponse, MyError> {
-    let index = wrap_body(TemplateLogin);
-    let body = index.render().unwrap();
-    Ok(HttpResponse::Ok().content_type("text/html").body(body))
-}
-#[post("/login")]
-#[instrument(skip())]
-pub async fn login_post(session_maps: web::Data<SessionMap>) -> Result<HttpResponse, MyError> {
-    let mut session_map = session_maps.lock().await;
-    let ssid = Uuid::new_v4().to_string();
-    session_map.insert(ssid.clone(), dto::UserId(1));
-    // info!("Starting a new subscription {:?}", path);
-    // let SubscriptionForm {
-    //     category,
-    //     title,
-    //     url,
-    // } = path.into_inner();
-
-    // let content = reqwest::get(url.clone())
-    //     .await
-    //     .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?
-    //     .bytes()
-    //     .await
-    //     .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?;
-    // let channel = Channel::read_from(&content[..])
-    //     .map_err(|x| MyError::InvalidSubscription(url.clone(), x.to_string()))?;
-    // let rss_feed = format!("{}", url);
-    // let subscription = dto::Subscription::insert(&&rss_feed, &clients.pool).await?;
-    // let subscription = dto::UserSubscription::insert(&&rss_feed, &clients.pool).await?;
-    // let subscription = dto::UserSubscription {
-    //     id: None,
-    //     title,
-    //     rss_feed: format!("{}", url),
-    //     category,
-    //     unreads: None,
-    // };
-    // subscription
-    //     .insert(&clients.pool)
-    //     .await
-    //     .map_err(MyError::Internal)?;
-    // info!("{:?}", subscription);
-    // info!("{:#?}", channel);
-    Ok(HttpResponse::TemporaryRedirect()
-        .cookie(
-            Cookie::build("ssid", ssid)
-                .path("/")
-                .secure(true)
-                .http_only(true)
-                .finish(),
-        )
-        .append_header(("Location", "/"))
-        .json("Ok"))
-}
-
-#[post("/subscriptions")]
-#[instrument(skip(clients))]
-pub async fn new_subscription(
-    path: web::Form<SubscriptionForm>,
-    clients: web::Data<Clients>,
-) -> Result<HttpResponse, MyError> {
-    info!("Starting a new subscription {:?}", path);
-    let SubscriptionForm {
-        category,
-        title,
-        url,
-    } = path.into_inner();
-
-    let user_id = dto::UserId(1);
-
-    let content = reqwest::get(url.clone())
-        .await
-        .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?
-        .bytes()
-        .await
-        .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?;
-    let _channel = Channel::read_from(&content[..])
-        .map_err(|x| MyError::InvalidSubscription(url.clone(), x.to_string()))?;
-    let rss_feed = format!("{}", url);
-    let subscription = dto::Subscription::insert(&rss_feed, &clients.pool).await?;
-    let _user_subscription =
-        dto::UserSubscription::insert(&category, &title, &subscription, &user_id, &clients.pool)
-            .await?;
-
-    Ok(HttpResponse::Ok().json("Ok"))
-}
-
-#[get("/")]
-#[instrument(skip(clients))]
-pub async fn get_all_subscriptions(
-    clients: web::Data<Clients>,
-    User(user_id): User,
-) -> Result<HttpResponse, MyError> {
-    let subscriptions = dto::UserSubscription::fetch_all(&user_id, &clients.pool).await?;
-    let subscription_map: HashMap<_, _> = subscriptions.iter().map(|x| (x.id, x)).collect();
-    let items = dto::Item::fetch_all_not_read(&user_id, &clients.pool).await?;
-    let index = wrap_body(AllSubscriptions {
-        subscriptions: subscriptions.iter().collect(),
-        subscription_map,
-        items: items.iter().collect(),
-    });
-    let body = index.render().unwrap();
-    Ok(HttpResponse::Ok().content_type("text/html").body(body))
-}
-
-#[get("/partial/item/{id}")]
-#[instrument(skip(clients))]
-pub async fn get_full_item_part(
-    clients: web::Data<Clients>,
-    id: web::Path<i64>,
-    User(user_id): User,
-) -> Result<HttpResponse, MyError> {
-    let item = dto::Item::fetch(*id, &clients.pool)
-        .await?
-        .ok_or_else(|| MyError::Missing("Item".to_string()))?;
-    let subscription =
-        dto::UserSubscription::fetch(&user_id, item.subscription_id, &clients.pool).await?;
-    let index = TemplateFullItem {
-        show_expanded: true,
-        subscription: &&subscription,
-        item: &item,
-    };
-    let body = index.render().unwrap();
-    Ok(HttpResponse::Ok().content_type("text/html").body(body))
-}
-#[get("/item/{id}")]
-#[instrument(skip(clients))]
-pub async fn get_full_item(
-    clients: web::Data<Clients>,
-    id: web::Path<i64>,
-    User(user_id): User,
-) -> Result<HttpResponse, MyError> {
-    let item = dto::Item::fetch(*id, &clients.pool)
-        .await?
-        .ok_or_else(|| MyError::Missing("Item".to_string()))?;
-    let subscription =
-        dto::UserSubscription::fetch(&user_id, item.subscription_id, &clients.pool).await?;
-    let index = wrap_body(TemplateFullItem {
-        show_expanded: true,
-        subscription: &&subscription,
-        item: &item,
-    });
-    let body = index.render().unwrap();
-    Ok(HttpResponse::Ok().content_type("text/html").body(body))
-}
-
 #[derive(Template, Debug, Clone)]
 #[template(path = "full_body.html.j2")]
 struct FullBody<A: Template + Display> {
     wrapped: A,
 }
 
-#[derive(Template, Debug, Clone)]
-#[template(path = "all_subscriptions.html.j2")]
-struct AllSubscriptions<'a> {
-    subscriptions: Vec<&'a dto::UserSubscription>,
-    subscription_map: HashMap<i64, &'a dto::UserSubscription>,
-    items: Vec<&'a dto::Item>,
-}
-
-#[derive(Template, Debug, Clone)]
-#[template(path = "item.html.j2")]
-struct TemplateFullItem<'a> {
-    item: &'a dto::Item,
-    subscription: &'a dto::UserSubscription,
-    show_expanded: bool,
-}
 fn wrap_body<A: Template + Display>(wrapped: A) -> FullBody<A> {
     FullBody { wrapped }
 }
@@ -273,16 +98,6 @@ impl error::ResponseError for MyError {
     }
 }
 
-mod filters {
-    use ammonia::Builder;
-
-    pub fn ammonia(s: &str) -> ::askama::Result<String> {
-        Ok(Builder::default()
-            .set_tag_attribute_value("img", "loading", "lazy")
-            .clean(s)
-            .to_string())
-    }
-}
 
 type SessionMap = Arc<Mutex<HashMap<String, dto::UserId>>>;
 
