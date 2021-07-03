@@ -17,6 +17,9 @@
     </div>
     <div class="Subscriptions"></div>
 
+      <div class="subscription_category">
+        All {{items.len()}}
+      </div>
     {% for subscription in subscriptions %}
       <div class="subscription_category">
         {{subscription.title|capitalize}} {{subscription.items_not_read}}

@@ -1,5 +1,4 @@
 use color_eyre::Result;
-use hex::ToHex;
 use sqlx::{Executor, Sqlite,  query_as};
 use sha3::{Sha3_256, Digest};
 use tracing::instrument;

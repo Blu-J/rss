@@ -1,13 +1,14 @@
 ### TODO
 
--  All Items as read
-- [ ] Single Items as read
+- 2021-07-03T20:50:43Z All Items as read
+- 2021-07-03T20:50:43Z User Login + Users
+- 2021-07-03T20:50:43Z Single Items as read
 - [ ] User Preferences as cookies
-- [ ] Nesting of categories
 - [ ] Filtering of items
-- [ ] User Login + Users
+- [ ] Nesting of categories
+- [ ] Better styling of articles
+- [ ] Daemon: Clean sessions
 - [ ] Import CSV?
 - [ ] Keyboard Navigation
 - [ ] Animations
-- [ ] Better styling of articles
 - [ ] Https
