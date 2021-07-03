@@ -4,7 +4,7 @@ use askama::Template;
 
 use crate::{clients::Clients, dto};
 
-use super::{MyError, User, wrap_body};
+use super::{MyError, UserIdPart, wrap_body};
 use super::filters;
 
 
@@ -14,7 +14,7 @@ use super::filters;
 pub async fn get_full_item_part(
     clients: web::Data<Clients>,
     id: web::Path<i64>,
-    User(user_id): User,
+    UserIdPart(user_id): UserIdPart,
 ) -> Result<HttpResponse, MyError> {
     let item = dto::Item::fetch(*id, &clients.pool)
         .await?
@@ -34,7 +34,7 @@ pub async fn get_full_item_part(
 pub async fn get_full_item(
     clients: web::Data<Clients>,
     id: web::Path<i64>,
-    User(user_id): User,
+    UserIdPart(user_id): UserIdPart,
 ) -> Result<HttpResponse, MyError> {
     let item = dto::Item::fetch(*id, &clients.pool)
         .await?

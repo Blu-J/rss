@@ -22,6 +22,7 @@ pub mod clients;
 pub mod dto;
 pub mod server;
 pub mod settings;
+pub mod session;
 
 lazy_static! {
     pub static ref CONFIG: Settings = Settings::new().unwrap();

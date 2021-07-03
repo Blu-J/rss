@@ -8,7 +8,7 @@ use serde::Deserialize;
 use askama::Template;
 use tracing::{info, instrument};
 
-use super::{User, wrap_body, filters};
+use super::{UserIdPart, wrap_body, filters};
 
 
 #[post("/subscriptions")]
@@ -47,7 +47,7 @@ pub async fn new_subscription(
 #[instrument(skip(clients))]
 pub async fn get_all_subscriptions(
     clients: web::Data<Clients>,
-    User(user_id): User,
+    UserIdPart(user_id): UserIdPart,
 ) -> Result<HttpResponse, MyError> {
     let subscriptions = dto::UserSubscription::fetch_all(&user_id, &clients.pool).await?;
     let subscription_map: HashMap<_, _> = subscriptions.iter().map(|x| (x.id, x)).collect();

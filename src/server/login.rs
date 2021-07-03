@@ -1,20 +1,29 @@
 
 
-use crate::{dto};
-use actix_web::{cookie::Cookie, get,post,web,  HttpResponse, 
-};
+use crate::{clients::Clients, dto::{ User}, session::{SessionMap, Session}};
+use actix_web::{HttpResponse, cookie::Cookie, get, http::header::ContentType, post, web};
 use askama::Template;
+use color_eyre::eyre::eyre;
 use serde::Deserialize;
 use tracing::{ instrument};
 
 use uuid::Uuid;
 
-use super::{MyError, SessionMap, wrap_body};
+use super::{MyError, wrap_body};
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct FormLogin {
+#[derive(Clone, Deserialize)]
+pub struct LoginForm {
     username: String,
     password: String,
+}
+
+impl std::fmt::Debug for LoginForm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FormLogin")
+         .field("username", &self.username)
+         .field("password", &"redacted")
+         .finish()
+    }
 }
 
 #[derive(Template, Debug, Clone)]
@@ -29,49 +38,28 @@ pub async fn login_get() -> Result<HttpResponse, MyError> {
 }
 #[post("/login")]
 #[instrument(skip())]
-pub async fn login_post(session_maps: web::Data<SessionMap>) -> Result<HttpResponse, MyError> {
+pub async fn login_post(
+    session_maps: web::Data<SessionMap>,
+    login_form: web::Form<LoginForm>,
+     clients: web::Data<Clients>) -> Result<HttpResponse, MyError> {
     let mut session_map = session_maps.lock().await;
-    let ssid = Uuid::new_v4().to_string();
-    session_map.insert(ssid.clone(), dto::UserId(1));
-    // info!("Starting a new subscription {:?}", path);
-    // let SubscriptionForm {
-    //     category,
-    //     title,
-    //     url,
-    // } = path.into_inner();
+    let user = User::fetch(&clients.pool, &login_form.username).await.map_err(MyError::CannotFind)?;
 
-    // let content = reqwest::get(url.clone())
-    //     .await
-    //     .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?
-    //     .bytes()
-    //     .await
-    //     .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?;
-    // let channel = Channel::read_from(&content[..])
-    //     .map_err(|x| MyError::InvalidSubscription(url.clone(), x.to_string()))?;
-    // let rss_feed = format!("{}", url);
-    // let subscription = dto::Subscription::insert(&&rss_feed, &clients.pool).await?;
-    // let subscription = dto::UserSubscription::insert(&&rss_feed, &clients.pool).await?;
-    // let subscription = dto::UserSubscription {
-    //     id: None,
-    //     title,
-    //     rss_feed: format!("{}", url),
-    //     category,
-    //     unreads: None,
-    // };
-    // subscription
-    //     .insert(&clients.pool)
-    //     .await
-    //     .map_err(MyError::Internal)?;
-    // info!("{:?}", subscription);
-    // info!("{:#?}", channel);
-    Ok(HttpResponse::TemporaryRedirect()
+    if !user.passwords_match(&login_form.password) {
+        return Err(MyError::CannotFind(eyre!("Cannot find")));
+    }
+
+    let ssid = Uuid::new_v4().to_string();
+    session_map.insert(ssid.clone(), Session::new((*user).clone()));
+    Ok(HttpResponse::Found()
         .cookie(
             Cookie::build("ssid", ssid)
                 .path("/")
-                .secure(true)
+                // .secure(true)
                 .http_only(true)
                 .finish(),
         )
+        .content_type(ContentType::html())
         .append_header(("Location", "/"))
         .json("Ok"))
 }

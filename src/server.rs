@@ -1,6 +1,5 @@
-use std::{collections::HashMap, fmt::Display, sync::Arc};
-use crate::{clients::Clients, dto};
-// use actix_session::CookieSession;
+use std::{fmt::Display};
+use crate::{clients::Clients, dto, session::SessionMap};
 use actix_web::{
     body::Body,  dev::Payload, error,  http::StatusCode, middleware, 
     rt::spawn, web, App, FromRequest, HttpRequest, HttpResponse, HttpServer,
@@ -8,7 +7,6 @@ use actix_web::{
 use askama::Template;
 use color_eyre::{eyre::eyre, Report};
 use futures::{future::LocalBoxFuture, FutureExt};
-use tokio::sync::Mutex;
 use tracing::{  warn};
 use uuid::Uuid;
 use login::{login_get, login_post};
@@ -23,6 +21,8 @@ mod filters;
 pub enum MyError {
     #[error("Invalid Subscription {}", .0)]
     InvalidSubscription(String, String),
+    #[error("Cannot find")]
+    CannotFind(Report),
     #[error("Bad Param {}", .0)]
     BadParam(String, String),
     #[error("Internal Error")]
@@ -41,12 +41,27 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .data(clients.clone())
                 .data(sessions.clone())
                 .wrap(middleware::Compress::default())
+                .service(login_get)
+                .service(login_post)
+                // .wrap_fn(|req, service| {
+                //     let (r, mut pl) = req.into_parts(); 
+                //     let token = auto_login(&r, &mut pl); 
+                //     let req = ServiceRequest::from_parts(r, pl).ok().unwrap(); <-- repack
+                //     if token.is_some() {
+                //         Either::Left(service.call(req))
+                //     } else {
+                //         Either::Right(ok(req.into_response(
+                //             HttpResponse::Found()
+                //                 .header(http::header::LOCATION, "/login")
+                //                 .finish()
+                //                 .into_body(),
+                //         )))
+                //     }
+                // })
                 .service(new_subscription)
                 .service(actix_files::Files::new("/static", "./static").show_files_listing())
                 .service(get_all_subscriptions)
                 .service(get_full_item)
-                .service(login_get)
-                .service(login_post)
                 .service(get_full_item_part)
         })
         .bind("0.0.0.0:8080")
@@ -71,7 +86,17 @@ impl error::ResponseError for MyError {
     fn error_response(&self) -> HttpResponse {
         warn!("actix response: {:?}", self);
         match self {
-            MyError::Internal(x) => {
+            MyError::CannotFind(x) => {
+
+                let uuid = Uuid::new_v4();
+                warn!("Cannot Find ({}): {:?}", uuid, x);
+                HttpResponse::with_body(
+                    self.status_code(),
+                    Body::from_message(format!("internal error {}", uuid)),
+                )
+                .into()
+            },
+            MyError::Internal(x)=> {
                 let uuid = Uuid::new_v4();
                 warn!("Internal Error ({}): {:?}", uuid, x);
                 HttpResponse::with_body(
@@ -93,18 +118,17 @@ impl error::ResponseError for MyError {
             | MyError::InvalidSubscription(_, _)
             | MyError::NotLoggedIn(_)
             | MyError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            MyError::Missing(_) => StatusCode::NOT_FOUND,
+            MyError::Missing(_) | MyError::CannotFind(_) => StatusCode::NOT_FOUND,
         }
     }
 }
 
 
-type SessionMap = Arc<Mutex<HashMap<String, dto::UserId>>>;
 
 #[derive(Debug, Clone)]
-pub struct User(pub dto::UserId);
+pub struct UserIdPart(pub dto::UserId);
 
-impl<'a> FromRequest for User {
+impl<'a> FromRequest for UserIdPart {
     type Error = MyError;
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
     type Config = ();
@@ -122,7 +146,7 @@ impl<'a> FromRequest for User {
                     .get(&session.to_string())
                     .ok_or_else(|| eyre!("No cookie in sessions"))?;
 
-                Ok(Self(user_id.clone()))
+                Ok(Self(user_id.user_id().clone()))
             })
             .map(|x| x.map_err(MyError::NotLoggedIn));
         Box::pin(value)
