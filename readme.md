@@ -1,5 +1,7 @@
 ### TODO
 
+-  All Items as read
+- [ ] Single Items as read
 - [ ] User Preferences as cookies
 - [ ] Nesting of categories
 - [ ] Filtering of items

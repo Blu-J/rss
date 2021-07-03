@@ -53,6 +53,7 @@ pub async fn get_all_subscriptions(
     let subscription_map: HashMap<_, _> = subscriptions.iter().map(|x| (x.id, x)).collect();
     let items = dto::Item::fetch_all_not_read(&user_id, &clients.pool).await?;
     let index = wrap_body(AllSubscriptions {
+        latest_read: items.iter().map(|x| x.pub_date as i64).max().unwrap_or_default(),
         subscriptions: subscriptions.iter().collect(),
         subscription_map,
         items: items.iter().collect(),
@@ -74,6 +75,7 @@ pub struct SubscriptionForm {
 #[derive(Template, Debug, Clone)]
 #[template(path = "all_subscriptions.html.j2")]
 struct AllSubscriptions<'a> {
+    latest_read: i64,
     subscriptions: Vec<&'a dto::UserSubscription>,
     subscription_map: HashMap<i64, &'a dto::UserSubscription>,
     items: Vec<&'a dto::Item>,

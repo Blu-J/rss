@@ -28,6 +28,9 @@
     class="padded"
     style="max-height: 100%; overflow-y: auto; overflow-x: hidden"
   >
+    <form hx-boost="true" action="/actions/mark_all_read/{{latest_read}}" method="post" hx-boost="true" hx-push-url="true">
+      <button type="submit">Mark All As Read</button>
+    </form>
     {% for item in items %} 
       {% let subscription = subscription_map.get(item.subscription_id).expect(format!("{}",item.subscription_id))%}
       {% let show_expanded =false%} 

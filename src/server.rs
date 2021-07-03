@@ -10,12 +10,13 @@ use futures::{future::LocalBoxFuture, FutureExt};
 use tracing::{  warn};
 use uuid::Uuid;
 use login::{login_get, login_post};
-use self::{items::{get_full_item, get_full_item_part}, subscriptions::{get_all_subscriptions, new_subscription}};
+use self::{actions::action_mark_all_read, items::{get_full_item, get_full_item_part}, subscriptions::{get_all_subscriptions, new_subscription}};
 
 mod login;
 mod items;
 mod subscriptions;
 mod filters;
+mod actions;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MyError {
@@ -63,6 +64,7 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .service(get_all_subscriptions)
                 .service(get_full_item)
                 .service(get_full_item_part)
+                .service(action_mark_all_read)
         })
         .bind("0.0.0.0:8080")
         .expect("starting server")
