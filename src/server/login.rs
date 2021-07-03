@@ -3,7 +3,7 @@ use crate::{
     dto::User,
     session::{Session, SessionMap},
 };
-use actix_web::{cookie::Cookie, get, http::header::ContentType, post, web, HttpResponse};
+use actix_web::{cookie::Cookie, get, post, web, HttpResponse};
 use askama::Template;
 use color_eyre::eyre::eyre;
 use serde::Deserialize;
@@ -64,7 +64,6 @@ pub async fn login_post(
                 .http_only(true)
                 .finish(),
         )
-        .content_type(ContentType::html())
         .append_header(("Location", "/"))
-        .json("Ok"))
+        .finish())
 }

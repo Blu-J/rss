@@ -48,21 +48,6 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .wrap(middleware::Compress::default())
                 .service(login_get)
                 .service(login_post)
-                // .wrap_fn(|req, service| {
-                //     let (r, mut pl) = req.into_parts();
-                //     let token = auto_login(&r, &mut pl);
-                //     let req = ServiceRequest::from_parts(r, pl).ok().unwrap(); <-- repack
-                //     if token.is_some() {
-                //         Either::Left(service.call(req))
-                //     } else {
-                //         Either::Right(ok(req.into_response(
-                //             HttpResponse::Found()
-                //                 .header(http::header::LOCATION, "/login")
-                //                 .finish()
-                //                 .into_body(),
-                //         )))
-                //     }
-                // })
                 .service(new_subscription)
                 .service(actix_files::Files::new("/static", "./static").show_files_listing())
                 .service(get_all_subscriptions)
@@ -92,6 +77,13 @@ impl error::ResponseError for MyError {
     fn error_response(&self) -> HttpResponse {
         warn!("actix response: {:?}", self);
         match self {
+            MyError::NotLoggedIn(x) => {
+                warn!("Redirecting:  {:?}", x);
+                HttpResponse::Found()
+                    .append_header(("Location", "/login"))
+                    .body("Not logged in")
+                    .into()
+            }
             MyError::CannotFind(x) => {
                 let uuid = Uuid::new_v4();
                 warn!("Cannot Find ({}): {:?}", uuid, x);
