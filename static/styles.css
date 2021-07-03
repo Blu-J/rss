@@ -1,8 +1,3 @@
-#all-subscriptions {
-  display: grid;
-  background-color: lightgrey;
-  grid-template-columns: 15em auto;
-}
 .article {
   display: grid;
   grid-template-columns: 7em 7em auto;
@@ -30,12 +25,12 @@
 * + * {
   margin-top: 0.5em;
 }
-:not(.opened) > .hidden_till_opened {
-  display: none;
-}
 .compact * + * {
   margin-top: 0.75em;
 }
 .margins-off > * {
   margin-top: 0;
+}
+body, html, #all-subscriptions{
+  height: 100%;
 }

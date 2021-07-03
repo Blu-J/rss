@@ -52,6 +52,6 @@ impl User {
         // read hash digest
         let result = hasher.finalize();
 
-        &self.salted_password == &hex::encode(result.as_slice())
+        self.salted_password == hex::encode(result.as_slice())
     }
 }

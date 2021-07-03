@@ -5,3 +5,6 @@ sql_create:
 
 sql_run:
 	sqlx migrate run
+
+dev:
+	cargo watch -s "pkill -9 cargo run" -cx "run"

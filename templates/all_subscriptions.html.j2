@@ -5,33 +5,58 @@
     display: grid;
     background-color: lightgrey;
     grid-template-columns: 15em auto;
+    
   "
 >
-  <div
-    id="sidebar"
-    class="padded"
-    style="background-color: #294973; color: #d7dde4"
-  >
-    <div class="header">
-      <input type="text" placeholder="Search" autocomplete="off" />
-    </div>
-    <div class="Subscriptions"></div>
+  {% if !sidebar_collapsed %}
+    <div
+      id="sidebar"
+      class="padded"
+      style="
+        background-color: #294973;
+        color: #d7dde4;
+        overflow-y:auto;
+        overflow-x:hidden;
+      "
+    >
+      <a href="/actions/collapse_sidebar">
+        🍔
+      </a>
+      <div class="header">
+        <input type="text" placeholder="Search" autocomplete="off" />
+      </div>
+      <div class="Subscriptions"></div>
 
-      <div class="subscription_category">
-        All {{items.len()}}
-      </div>
-    {% for subscription in subscriptions %}
-      <div class="subscription_category">
-        {{subscription.title|capitalize}} {{subscriptions_read.get(subscription.id).unwrap_or(0)}}
-      </div>
-    {% endfor %}
-  </div>
+        <div class="subscription_category" >
+          <a href="/actions/filter_all_subscriptions">All</a> {{items.len()}}
+        </div>
+      {% for subscription in subscriptions %}
+        <div class="subscription_category">
+          <a href="/actions/filter_by_category/{{subscription.id}}">{{subscription.title|capitalize}}</a> {{subscriptions_read.get(subscription.id).unwrap_or("?".to_string())}}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  
   <div
     id="articles"
     class="padded"
-    style="max-height: 100%; overflow-y: auto; overflow-x: hidden"
+    style="
+      max-height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;      
+      grid-column-end: 5;
+      {% if sidebar_collapsed %}
+        grid-column-start: 1;
+      {% endif%}
+    "
   >
-    <form hx-boost="true" action="/actions/mark_all_read/{{latest_read}}" method="post" hx-boost="true" hx-push-url="true">
+    {% if sidebar_collapsed %}
+      <a href="/actions/expand_sidebar">
+        🍔
+      </a>
+    {% endif%}
+    <form action="/actions/mark_all_read/{{latest_read}}" method="get" hx-boost="true" hx-push-url="true">
       <button type="submit">Mark All As Read</button>
     </form>
     {% for item in items %} 

@@ -7,7 +7,11 @@ use rss::Channel;
 use serde::Deserialize;
 use tracing::{info, instrument};
 
-use super::{filters, wrap_body, UserIdPart};
+use super::{
+    filters,
+    from_requests::{user_id::UserIdPart, user_preferences::UserPreferences},
+    wrap_body,
+};
 
 #[post("/subscriptions")]
 #[instrument(skip(clients))]
@@ -32,7 +36,7 @@ pub async fn new_subscription(
         .map_err(|e| MyError::BadParam("url".into(), format!("{:?}", e)))?;
     let _channel = Channel::read_from(&content[..])
         .map_err(|x| MyError::InvalidSubscription(url.clone(), x.to_string()))?;
-    let rss_feed = format!("{}", url);
+    let rss_feed = url.to_string();
     let subscription = dto::Subscription::insert(&rss_feed, &clients.pool).await?;
     let _user_subscription =
         dto::UserSubscription::insert(&category, &title, &subscription, &user_id, &clients.pool)
@@ -46,11 +50,14 @@ pub async fn new_subscription(
 pub async fn get_all_subscriptions(
     clients: web::Data<Clients>,
     UserIdPart(user_id): UserIdPart,
+    user_preference: UserPreferences,
 ) -> Result<HttpResponse, MyError> {
     let subscriptions = dto::UserSubscription::fetch_all(&user_id, &clients.pool).await?;
     let subscription_map: HashMap<_, _> = subscriptions.iter().map(|x| (x.id, x)).collect();
-    let items = dto::Item::fetch_all_not_read(&user_id, &clients.pool).await?;
-    let subscriptions_read: HashMap<i64, usize> = subscriptions
+    let items =
+        dto::Item::fetch_all_not_read(&user_id, &user_preference.filter_items, &clients.pool)
+            .await?;
+    let subscriptions_read: HashMap<i64, String> = subscriptions
         .iter()
         .map(|subscription| {
             (
@@ -58,7 +65,8 @@ pub async fn get_all_subscriptions(
                 items
                     .iter()
                     .filter(|x| x.subscription_id == subscription.id)
-                    .count(),
+                    .count()
+                    .to_string(),
             )
         })
         .collect();
@@ -72,6 +80,7 @@ pub async fn get_all_subscriptions(
         subscription_map,
         subscriptions_read,
         items: items.iter().collect(),
+        sidebar_collapsed: user_preference.sidebar_collapsed,
     });
     let body = index.render().unwrap();
     Ok(HttpResponse::Ok().content_type("text/html").body(body))
@@ -90,6 +99,7 @@ struct AllSubscriptions<'a> {
     latest_read: i64,
     subscriptions: Vec<&'a dto::UserSubscription>,
     subscription_map: HashMap<i64, &'a dto::UserSubscription>,
-    subscriptions_read: HashMap<i64, usize>,
+    subscriptions_read: HashMap<i64, String>,
     items: Vec<&'a dto::Item>,
+    sidebar_collapsed: bool,
 }

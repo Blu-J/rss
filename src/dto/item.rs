@@ -3,6 +3,7 @@ use sqlx::{query_as, query_file_as, Executor, Sqlite};
 use tracing::instrument;
 
 use super::UserId;
+use crate::server::from_requests::user_preferences::FilterItems;
 #[derive(Debug, Clone)]
 pub struct Item {
     pub id: i64,
@@ -34,9 +35,11 @@ impl Item {
     #[instrument(skip(executor))]
     pub async fn fetch_all_not_read<'a>(
         user_id: &UserId,
+        filter_items: &FilterItems,
         executor: impl Executor<'a, Database = Sqlite>,
     ) -> Result<Vec<Self>> {
-        let answer = query_file_as!(Self, "queries/user_item_fetch_all.sql", user_id)
+        let (id, title) = filter_items.as_items();
+        let answer = query_file_as!(Self, "queries/user_item_fetch_all.sql", user_id, id, title)
             .fetch_all(executor)
             .await?;
         Ok(answer)

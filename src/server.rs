@@ -1,16 +1,13 @@
 use self::{
-    actions::action_mark_all_read,
     items::{get_full_item, get_full_item_part},
     subscriptions::{get_all_subscriptions, new_subscription},
 };
-use crate::{clients::Clients, dto, session::SessionMap};
+use crate::{clients::Clients, session::SessionMap};
 use actix_web::{
-    body::Body, dev::Payload, error, http::StatusCode, middleware, rt::spawn, web, App,
-    FromRequest, HttpRequest, HttpResponse, HttpServer,
+    body::Body, error, http::StatusCode, middleware, rt::spawn, App, HttpResponse, HttpServer,
 };
 use askama::Template;
-use color_eyre::{eyre::eyre, Report};
-use futures::{future::LocalBoxFuture, FutureExt};
+use color_eyre::Report;
 use login::{login_get, login_post};
 use std::fmt::Display;
 use tracing::warn;
@@ -53,7 +50,12 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .service(get_all_subscriptions)
                 .service(get_full_item)
                 .service(get_full_item_part)
-                .service(action_mark_all_read)
+                .service(actions::action_mark_all_read)
+                .service(actions::filter_all_subscriptions)
+                .service(actions::filter_by_category)
+                .service(actions::filter_by_category_title)
+                .service(actions::expand_sidebar)
+                .service(actions::collapse_sidebar)
         })
         .bind("0.0.0.0:8080")
         .expect("starting server")
@@ -82,7 +84,6 @@ impl error::ResponseError for MyError {
                 HttpResponse::Found()
                     .append_header(("Location", "/login"))
                     .body("Not logged in")
-                    .into()
             }
             MyError::CannotFind(x) => {
                 let uuid = Uuid::new_v4();
@@ -91,7 +92,6 @@ impl error::ResponseError for MyError {
                     self.status_code(),
                     Body::from_message(format!("internal error {}", uuid)),
                 )
-                .into()
             }
             MyError::Internal(x) => {
                 let uuid = Uuid::new_v4();
@@ -100,11 +100,9 @@ impl error::ResponseError for MyError {
                     self.status_code(),
                     Body::from_message(format!("internal error {}", uuid)),
                 )
-                .into()
             }
             _ => {
                 HttpResponse::with_body(self.status_code(), Body::from_message(format!("{}", self)))
-                    .into()
             }
         }
     }
@@ -120,30 +118,7 @@ impl error::ResponseError for MyError {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct UserIdPart(pub dto::UserId);
-
-impl<'a> FromRequest for UserIdPart {
-    type Error = MyError;
-    type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
-    type Config = ();
-
-    #[inline]
-    fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
-        let ssid = dbg!(req.cookie("ssid"));
-        let value = web::Data::<SessionMap>::from_request(req, payload)
-            .then(|session_map| async move {
-                let session = ssid.ok_or_else(|| eyre!("Need to have a SSID cookie"))?;
-                let session = session.value();
-                let sessions_data = session_map.map_err(|_| eyre!("Could not extract sessions"))?;
-                let sessions = sessions_data.lock().await;
-                let user_id = sessions
-                    .get(&session.to_string())
-                    .ok_or_else(|| eyre!("No cookie in sessions"))?;
-
-                Ok(Self(user_id.user_id().clone()))
-            })
-            .map(|x| x.map_err(MyError::NotLoggedIn));
-        Box::pin(value)
-    }
+pub(crate) mod from_requests {
+    pub mod user_id;
+    pub mod user_preferences;
 }

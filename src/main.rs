@@ -43,7 +43,7 @@ async fn main() -> color_eyre::Result<()> {
                     x = timeout(Duration::from_secs(60), async {
                         let start = Utc::now();
                         let items_to_insert: Vec<_> = stream::iter(dto::Subscription::fetch_all(&clients.pool).await?.into_iter().map(|subscription| async move{
-                            Ok::<_, Report>(subscription.get_items().await?)
+                            subscription.get_items().await
                         })).buffer_unordered(10).filter_map(|x| async {match x {
                             Ok(x) => Some(x),
                             Err(e) => {

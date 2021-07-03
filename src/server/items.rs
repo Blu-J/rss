@@ -9,7 +9,7 @@ use tracing::instrument;
 use crate::{clients::Clients, dto};
 
 use super::filters;
-use super::{wrap_body, MyError, UserIdPart};
+use super::{from_requests::user_id::UserIdPart, wrap_body, MyError};
 
 #[get("/items/partial/{id}")]
 #[instrument(skip(clients))]

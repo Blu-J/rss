@@ -29,7 +29,7 @@ impl Subscription {
                     .pub_date
                     .clone()
                     .and_then(|x| httpdate::parse_http_date(&x).ok())
-                    .unwrap_or_else(|| SystemTime::now())
+                    .unwrap_or_else(SystemTime::now)
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .ok()
                     .unwrap_or_default()
