@@ -9,7 +9,10 @@ use tracing::{info, instrument};
 
 use super::{
     filters,
-    from_requests::{user_id::UserIdPart, user_preferences::UserPreferences},
+    from_requests::{
+        user_id::UserIdPart,
+        user_preferences::{ShowUnreads, UserPreferences},
+    },
     wrap_body,
 };
 
@@ -54,9 +57,13 @@ pub async fn get_all_subscriptions(
 ) -> Result<HttpResponse, MyError> {
     let subscriptions = dto::UserSubscription::fetch_all(&user_id, &clients.pool).await?;
     let subscription_map: HashMap<_, _> = subscriptions.iter().map(|x| (x.id, x)).collect();
-    let items =
-        dto::Item::fetch_all_not_read(&user_id, &user_preference.filter_items, &clients.pool)
-            .await?;
+    let items = dto::Item::fetch_all_not_read(
+        &user_id,
+        &user_preference.filter_items,
+        &user_preference.show_unreads,
+        &clients.pool,
+    )
+    .await?;
     let subscriptions_read: HashMap<i64, String> = subscriptions
         .iter()
         .map(|subscription| {
@@ -80,6 +87,7 @@ pub async fn get_all_subscriptions(
         subscription_map,
         subscriptions_read,
         items: items.iter().collect(),
+        show_unreads: user_preference.show_unreads,
         sidebar_collapsed: user_preference.sidebar_collapsed,
     });
     let body = index.render().unwrap();
@@ -102,4 +110,5 @@ struct AllSubscriptions<'a> {
     subscriptions_read: HashMap<i64, String>,
     items: Vec<&'a dto::Item>,
     sidebar_collapsed: bool,
+    show_unreads: ShowUnreads,
 }

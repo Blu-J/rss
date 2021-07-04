@@ -56,6 +56,8 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .service(actions::filter_by_category_title)
                 .service(actions::expand_sidebar)
                 .service(actions::collapse_sidebar)
+                .service(actions::show_everything)
+                .service(actions::show_unreads)
         })
         .bind("0.0.0.0:8080")
         .expect("starting server")

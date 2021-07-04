@@ -9,7 +9,7 @@ use crate::clients::Clients;
 use super::{
     from_requests::{
         user_id::UserIdPart,
-        user_preferences::{FilterItems, UserPreferences, USER_PREFERENCE},
+        user_preferences::{FilterItems, ShowUnreads, UserPreferences, USER_PREFERENCE},
     },
     MyError,
 };
@@ -136,6 +136,44 @@ pub async fn collapse_sidebar(user_preference: UserPreferences) -> Result<HttpRe
 pub async fn expand_sidebar(user_preference: UserPreferences) -> Result<HttpResponse, MyError> {
     let user_preference = serde_json::to_string(&UserPreferences {
         sidebar_collapsed: false,
+        ..user_preference
+    })
+    .ok()
+    .unwrap_or_default();
+    Ok(HttpResponse::Found()
+        .cookie(
+            Cookie::build(USER_PREFERENCE, user_preference)
+                .path("/")
+                .http_only(true)
+                .finish(),
+        )
+        .append_header(("Location", "/"))
+        .finish())
+}
+#[get("/actions/show_unreads")]
+#[instrument(skip())]
+pub async fn show_unreads(user_preference: UserPreferences) -> Result<HttpResponse, MyError> {
+    let user_preference = serde_json::to_string(&UserPreferences {
+        show_unreads: ShowUnreads::ShowUnreads,
+        ..user_preference
+    })
+    .ok()
+    .unwrap_or_default();
+    Ok(HttpResponse::Found()
+        .cookie(
+            Cookie::build(USER_PREFERENCE, user_preference)
+                .path("/")
+                .http_only(true)
+                .finish(),
+        )
+        .append_header(("Location", "/"))
+        .finish())
+}
+#[get("/actions/show_everything")]
+#[instrument(skip())]
+pub async fn show_everything(user_preference: UserPreferences) -> Result<HttpResponse, MyError> {
+    let user_preference = serde_json::to_string(&UserPreferences {
+        show_unreads: ShowUnreads::ShowEverything,
         ..user_preference
     })
     .ok()

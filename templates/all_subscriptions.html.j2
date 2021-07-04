@@ -17,7 +17,7 @@
         color: #d7dde4;
         overflow-y:auto;
         overflow-x:hidden;
-      "
+      " hx-boost="true"
     >
       <a href="/actions/collapse_sidebar">
         🍔
@@ -52,13 +52,23 @@
     "
   >
     {% if sidebar_collapsed %}
-      <a href="/actions/expand_sidebar">
+      <a href="/actions/expand_sidebar" hx-boost="true">
         🍔
       </a>
     {% endif%}
     <form action="/actions/mark_all_read/{{latest_read}}" method="get" hx-boost="true" hx-push-url="true">
       <button type="submit">Mark All As Read</button>
     </form>
+    {% match show_unreads %} 
+      {% when ShowUnreads::ShowEverything %}
+        <form action="/actions/show_unreads" method="get" hx-boost="true" hx-push-url="true">
+          <button type="submit">Show Unreads</button>
+        </form>
+      {% when ShowUnreads::ShowUnreads %}
+        <form action="/actions/show_everything" method="get" hx-boost="true" hx-push-url="true">
+          <button type="submit">Show Everything</button>
+        </form>
+    {% endmatch %} 
     {% for item in items %} 
       {% let subscription = subscription_map.get(item.subscription_id).expect(format!("{}",item.subscription_id))%}
       {% let show_expanded =false%} 
