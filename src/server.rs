@@ -7,8 +7,10 @@ use actix_web::{
     body::Body, error, http::StatusCode, middleware, rt::spawn, App, HttpResponse, HttpServer,
 };
 use color_eyre::Report;
+use futures::lock::Mutex;
 use login::{login_get, login_post};
-use std::fmt::Display;
+use lru_time_cache::LruCache;
+use std::{fmt::Display, sync::Arc, time::Duration};
 use tracing::warn;
 use uuid::Uuid;
 
@@ -36,7 +38,11 @@ pub enum MyError {
 
 pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
     spawn(async move {
-        let sessions: SessionMap = Default::default();
+        let sessions: SessionMap =
+            Arc::new(Mutex::new(LruCache::with_expiry_duration_and_capacity(
+                Duration::from_secs(clients.settings.time_of_cookies_s),
+                clients.settings.max_sessions as usize,
+            )));
         HttpServer::new(move || {
             App::new()
                 .data(clients.clone())

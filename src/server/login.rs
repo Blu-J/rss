@@ -1,3 +1,8 @@
+use std::{
+    ops::Add,
+    time::{Duration, SystemTime},
+};
+
 use crate::{
     clients::Clients,
     dto::User,
@@ -59,8 +64,13 @@ pub async fn login_post(
         .cookie(
             Cookie::build("ssid", ssid)
                 .path("/")
-                // .secure(true)
+                .secure(clients.settings.secure)
                 .http_only(true)
+                .expires(Some(
+                    SystemTime::now()
+                        .add(Duration::from_secs(clients.settings.time_of_cookies_s))
+                        .into(),
+                ))
                 .finish(),
         )
         .append_header(("Location", "/"))

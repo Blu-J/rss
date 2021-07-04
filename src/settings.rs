@@ -2,7 +2,12 @@ use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct Settings {}
+pub struct Settings {
+    pub max_sessions: u64,
+    pub time_of_cookies_s: u64,
+    pub db_name: String,
+    pub secure: bool,
+}
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {

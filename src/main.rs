@@ -13,7 +13,6 @@ use actix_web::rt::{
 use chrono::Utc;
 use color_eyre::Report;
 use futures::{select, stream, FutureExt, StreamExt};
-use lazy_static::lazy_static;
 
 use settings::Settings;
 use tracing::{error, info, warn};
@@ -24,15 +23,11 @@ pub mod server;
 pub mod session;
 pub mod settings;
 
-lazy_static! {
-    pub static ref CONFIG: Settings = Settings::new().unwrap();
-}
-
 #[actix_web::main]
 async fn main() -> color_eyre::Result<()> {
     install_tracing()?;
     info!("Hello, world!");
-    let clients = Clients::new("./data.db").await?;
+    let clients = Clients::new(Settings::new().unwrap()).await?;
 
     let server = spawn_server(clients.clone());
     let task2 = spawn(async move {

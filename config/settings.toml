@@ -1,0 +1,4 @@
+time_of_cookies_s = 2592000 # 30*24*60*60
+db_name = "data.db"
+max_sessions = 1_000_000
+secure = false

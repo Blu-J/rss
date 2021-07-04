@@ -2566,7 +2566,6 @@ dependencies = [
  "futures",
  "hex",
  "httpdate",
- "lazy_static",
  "lru_time_cache",
  "maplit",
  "markup",

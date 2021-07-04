@@ -1,10 +1,11 @@
-use std::{collections::HashMap, sync::Arc, time::SystemTime};
+use std::{sync::Arc, time::SystemTime};
 
 use futures::lock::Mutex;
+use lru_time_cache::LruCache;
 
 use crate::dto::UserId;
 
-pub type SessionMap = Arc<Mutex<HashMap<String, Session>>>;
+pub type SessionMap = Arc<Mutex<LruCache<String, Session>>>;
 
 #[derive(Debug, Clone)]
 pub struct Session {

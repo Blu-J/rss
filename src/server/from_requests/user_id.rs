@@ -20,7 +20,7 @@ impl<'a> FromRequest for UserIdPart {
                 let session = ssid.ok_or_else(|| eyre!("Need to have a SSID cookie"))?;
                 let session = session.value();
                 let sessions_data = session_map.map_err(|_| eyre!("Could not extract sessions"))?;
-                let sessions = sessions_data.lock().await;
+                let mut sessions = sessions_data.lock().await;
                 let user_id = sessions
                     .get(&session.to_string())
                     .ok_or_else(|| eyre!("No cookie in sessions"))?;
