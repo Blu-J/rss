@@ -8,13 +8,15 @@
 - 2021-07-04T03:12:53Z Show Reads
 - 2021-07-04T03:12:53Z Daemon: Clean sessions
 - [ ] Date from Rss
-- [ ] Nesting of categories
-- [ ] Better styling of articles
 - [ ] Atom
 - [ ] Import CSV?
+- [ ] Nesting of categories
+- [ ] Category Breadcrumbs
+- [ ] Better styling of articles
 - [ ] Keyboard Navigation
 - [ ] Animations
   - [ ] Clicking Element will expand to whole page or target?
   - [ ] Resizes look nicer than drop
+- [ ] Served
 - [ ] Search
 - [ ] Https
