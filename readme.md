@@ -1,4 +1,4 @@
-### Features
+### Features / TODO
 
 - 2021-07-03T20:50:43Z All Items as read
 - 2021-07-03T20:50:43Z User Login + Users
@@ -17,7 +17,8 @@
 - [ ] Animations
   - [ ] Clicking Element will expand to whole page or target?
   - [ ] Resizes look nicer than drop
-- [ ] User creations
+- [ ] Creating Users/ Signup
+- [ ] Subscribing to Places
 - [ ] Search
 - [ ] Https
 - [ ] Import CSV?

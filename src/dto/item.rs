@@ -4,6 +4,7 @@ use tracing::instrument;
 
 use super::UserId;
 use crate::server::from_requests::user_preferences::{FilterItems, ShowUnreads};
+/// Items are the rss articles
 #[derive(Debug, Clone)]
 pub struct Item {
     pub id: i64,
