@@ -1,14 +1,13 @@
 use std::time::SystemTime;
 
 use actix_web::{get, web, HttpResponse};
-use askama::Template;
 use color_eyre::eyre::eyre;
 use color_eyre::Report;
 use tracing::instrument;
 
+use crate::server::templates;
 use crate::{clients::Clients, dto};
 
-use super::filters;
 use super::{from_requests::user_id::UserIdPart, wrap_body, MyError};
 
 #[get("/items/partial/{id}")]
@@ -39,13 +38,14 @@ pub async fn get_full_item_part(
     .map_err(MyError::Internal)?;
     let subscription =
         dto::UserSubscription::fetch(&user_id, item.subscription_id, &clients.pool).await?;
-    let index = TemplateFullItem {
+    let index = templates::Item {
         show_expanded: true,
         subscription: &&subscription,
         item: &item,
     };
-    let body = index.render().unwrap();
-    Ok(HttpResponse::Ok().content_type("text/html").body(body))
+    Ok(HttpResponse::Ok()
+        .content_type("text/html")
+        .body(index.to_string()))
 }
 #[get("/item/{id}")]
 #[instrument(skip(clients))]
@@ -59,19 +59,10 @@ pub async fn get_full_item(
         .ok_or_else(|| MyError::Missing("Item".to_string()))?;
     let subscription =
         dto::UserSubscription::fetch(&user_id, item.subscription_id, &clients.pool).await?;
-    let index = wrap_body(TemplateFullItem {
+    let body = wrap_body(templates::Item {
         show_expanded: true,
         subscription: &&subscription,
         item: &item,
     });
-    let body = index.render().unwrap();
     Ok(HttpResponse::Ok().content_type("text/html").body(body))
-}
-
-#[derive(Template, Debug, Clone)]
-#[template(path = "item.html.j2")]
-struct TemplateFullItem<'a> {
-    item: &'a dto::Item,
-    subscription: &'a dto::UserSubscription,
-    show_expanded: bool,
 }

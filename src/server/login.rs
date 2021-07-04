@@ -4,14 +4,13 @@ use crate::{
     session::{Session, SessionMap},
 };
 use actix_web::{cookie::Cookie, get, post, web, HttpResponse};
-use askama::Template;
 use color_eyre::eyre::eyre;
 use serde::Deserialize;
 use tracing::instrument;
 
 use uuid::Uuid;
 
-use super::{wrap_body, MyError};
+use super::{templates, MyError};
 
 #[derive(Clone, Deserialize)]
 pub struct LoginForm {
@@ -28,15 +27,15 @@ impl std::fmt::Debug for LoginForm {
     }
 }
 
-#[derive(Template, Debug, Clone)]
-#[template(path = "login.j2")]
-struct TemplateLogin;
 #[get("/login")]
 #[instrument]
 pub async fn login_get() -> Result<HttpResponse, MyError> {
-    let index = wrap_body(TemplateLogin);
-    let body = index.render().unwrap();
-    Ok(HttpResponse::Ok().content_type("text/html").body(body))
+    Ok(HttpResponse::Ok().content_type("text/html").body(
+        templates::Home {
+            body: &templates::Login {}.to_string(),
+        }
+        .to_string(),
+    ))
 }
 #[post("/login")]
 #[instrument(skip())]

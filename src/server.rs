@@ -6,7 +6,6 @@ use crate::{clients::Clients, session::SessionMap};
 use actix_web::{
     body::Body, error, http::StatusCode, middleware, rt::spawn, App, HttpResponse, HttpServer,
 };
-use askama::Template;
 use color_eyre::Report;
 use login::{login_get, login_post};
 use std::fmt::Display;
@@ -14,10 +13,10 @@ use tracing::warn;
 use uuid::Uuid;
 
 mod actions;
-mod filters;
 mod items;
 mod login;
 mod subscriptions;
+pub mod templates;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MyError {
@@ -67,14 +66,11 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
     })
 }
 
-#[derive(Template, Debug, Clone)]
-#[template(path = "full_body.html.j2")]
-struct FullBody<A: Template + Display> {
-    wrapped: A,
-}
-
-fn wrap_body<A: Template + Display>(wrapped: A) -> FullBody<A> {
-    FullBody { wrapped }
+fn wrap_body<A: Display>(wrapped: A) -> String {
+    templates::Home {
+        body: &format!("{}", wrapped),
+    }
+    .to_string()
 }
 
 impl error::ResponseError for MyError {

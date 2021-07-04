@@ -2,18 +2,13 @@ use std::collections::HashMap;
 
 use crate::{clients::Clients, dto, server::MyError};
 use actix_web::{get, post, web, HttpResponse};
-use askama::Template;
 use rss::Channel;
 use serde::Deserialize;
 use tracing::{info, instrument};
 
 use super::{
-    filters,
-    from_requests::{
-        user_id::UserIdPart,
-        user_preferences::{ShowUnreads, UserPreferences},
-    },
-    wrap_body,
+    from_requests::{user_id::UserIdPart, user_preferences::UserPreferences},
+    templates, wrap_body,
 };
 
 #[post("/subscriptions")]
@@ -77,7 +72,7 @@ pub async fn get_all_subscriptions(
             )
         })
         .collect();
-    let index = wrap_body(AllSubscriptions {
+    let index = wrap_body(templates::AllSubscriptions {
         latest_read: items
             .iter()
             .map(|x| x.pub_date as i64)
@@ -90,8 +85,7 @@ pub async fn get_all_subscriptions(
         show_unreads: user_preference.show_unreads,
         sidebar_collapsed: user_preference.sidebar_collapsed,
     });
-    let body = index.render().unwrap();
-    Ok(HttpResponse::Ok().content_type("text/html").body(body))
+    Ok(HttpResponse::Ok().content_type("text/html").body(index))
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -99,16 +93,4 @@ pub struct SubscriptionForm {
     category: String,
     title: String,
     url: String,
-}
-
-#[derive(Template, Debug, Clone)]
-#[template(path = "all_subscriptions.html.j2")]
-struct AllSubscriptions<'a> {
-    latest_read: i64,
-    subscriptions: Vec<&'a dto::UserSubscription>,
-    subscription_map: HashMap<i64, &'a dto::UserSubscription>,
-    subscriptions_read: HashMap<i64, String>,
-    items: Vec<&'a dto::Item>,
-    sidebar_collapsed: bool,
-    show_unreads: ShowUnreads,
 }

@@ -40,7 +40,7 @@ impl Item {
         executor: impl Executor<'a, Database = Sqlite>,
     ) -> Result<Vec<Self>> {
         let (id, title) = filter_items.as_items();
-        let show_unreads = dbg!(show_unreads.query_value());
+        let show_unreads = show_unreads.query_value();
         let answer = query_file_as!(
             Self,
             "queries/user_item_fetch_all.sql",
