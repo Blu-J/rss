@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Settings {
     pub max_sessions: u64,
     pub time_of_cookies_s: u64,
+    pub time_of_polling_items: u64,
     pub db_name: String,
     pub secure: bool,
 }

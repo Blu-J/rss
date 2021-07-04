@@ -35,7 +35,7 @@ async fn main() -> color_eyre::Result<()> {
             let mut sigup = signal(SignalKind::hangup())?;
             loop {
                 match select! {
-                    x = timeout(Duration::from_secs(60), async {
+                    x = timeout(Duration::from_secs(clients.settings.time_of_polling_items + 60), async {
                         let start = Utc::now();
                         let items_to_insert: Vec<_> = stream::iter(dto::Subscription::fetch_all(&clients.pool).await?.into_iter().map(|subscription| async move{
                             subscription.get_items().await
@@ -54,7 +54,7 @@ async fn main() -> color_eyre::Result<()> {
                         let duration = Utc::now().sub(start);
                         info!("Time to insert {} items: {}", items_to_insert.len(), duration);
 
-                        time::sleep(Duration::from_secs(10)).await;
+                        time::sleep(Duration::from_secs(clients.settings.time_of_polling_items)).await;
                         Ok::<_, Report>(())
                     }).fuse() => x,
                     _ = ctrl_c().fuse() => break,
