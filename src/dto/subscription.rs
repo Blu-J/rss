@@ -1,5 +1,6 @@
 use std::time::SystemTime;
 
+use chrono::DateTime;
 use color_eyre::Result;
 use rss::Channel;
 use sqlx::{query_as, query_file_as, Executor, Sqlite};
@@ -25,10 +26,7 @@ impl Subscription {
                 subscription_id,
                 title: item.title.unwrap_or_default(),
                 link: item.link.unwrap_or_default(),
-                pub_date: item
-                    .pub_date
-                    .clone()
-                    .and_then(|x| httpdate::parse_http_date(&x).ok())
+                pub_date: dbg!(dbg!(item.pub_date).as_ref().and_then(|x| parse_date(x)))
                     .unwrap_or_else(SystemTime::now)
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .ok()
@@ -74,4 +72,14 @@ impl Subscription {
         .await?;
         Ok(answer)
     }
+}
+
+fn parse_date(date: &str) -> Option<SystemTime> {
+    if let Some(date) = DateTime::parse_from_rfc2822(date).ok() {
+        return Some(date.into());
+    }
+    if let Some(date) = DateTime::parse_from_rfc3339(date).ok() {
+        return Some(date.into());
+    }
+    None
 }

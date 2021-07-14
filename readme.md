@@ -7,7 +7,9 @@
 - 2021-07-03T23:21:42Z Filtering of items
 - 2021-07-04T03:12:53Z Show Reads
 - 2021-07-04T03:12:53Z Daemon: Clean sessions
-- [ ] Date from Rss
+- 2021-07-14T21:15:52Z Date from Rss
+- [ ] New Subscription
+- [ ] Scraper
 - [ ] Atom
 - [ ] Served somewhere
 - [ ] Nesting of categories
