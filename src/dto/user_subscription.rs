@@ -40,7 +40,7 @@ impl UserSubscription {
         subscription: &Subscription,
         user_id: &UserId,
         executor: impl Executor<'a, Database = Sqlite>,
-    ) -> Result<Self> {
+    ) -> Result<Option<Self>> {
         let answer = query_file_as!(
             Self,
             "queries/user_subscription_insert.sql",
@@ -51,7 +51,7 @@ impl UserSubscription {
             user_id,
             subscription.id,
         )
-        .fetch_one(executor)
+        .fetch_optional(executor)
         .await?;
         Ok(answer)
     }

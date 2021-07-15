@@ -1,14 +1,14 @@
 use self::{
     items::{get_full_item, get_full_item_part},
-    subscriptions::{get_all_subscriptions, new_subscription},
+    subscriptions::{new_subscription, page_all_subscriptions, page_rss_subscription_form},
 };
 use crate::{clients::Clients, session::SessionMap};
 use actix_web::{
-    body::Body, error, http::StatusCode, middleware, rt::spawn, App, HttpResponse, HttpServer,
+    body::Body, error, http::StatusCode, middleware, rt::spawn, web, App, HttpResponse, HttpServer,
 };
 use color_eyre::Report;
 use futures::lock::Mutex;
-use login::{login_get, login_post};
+use login::{login_post, page_login};
 use lru_time_cache::LruCache;
 use std::{fmt::Display, sync::Arc, time::Duration};
 use tracing::warn;
@@ -45,14 +45,14 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
             )));
         HttpServer::new(move || {
             App::new()
-                .app_data(clients.clone())
-                .app_data(sessions.clone())
+                .app_data(web::Data::new(clients.clone()))
+                .app_data(web::Data::new(sessions.clone()))
                 .wrap(middleware::Compress::default())
-                .service(login_get)
+                .service(page_login)
+                .service(page_all_subscriptions)
+                .service(page_rss_subscription_form)
                 .service(login_post)
                 .service(new_subscription)
-                .service(actix_files::Files::new("/static", "./static").show_files_listing())
-                .service(get_all_subscriptions)
                 .service(get_full_item)
                 .service(get_full_item_part)
                 .service(actions::action_mark_all_read)
@@ -63,6 +63,7 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .service(actions::collapse_sidebar)
                 .service(actions::show_everything)
                 .service(actions::show_unreads)
+                .service(actix_files::Files::new("/static", "./static").show_files_listing())
         })
         .bind("0.0.0.0:8080")
         .expect("starting server")

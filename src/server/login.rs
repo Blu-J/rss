@@ -34,7 +34,7 @@ impl std::fmt::Debug for LoginForm {
 
 #[get("/login")]
 #[instrument]
-pub async fn login_get() -> Result<HttpResponse, MyError> {
+pub async fn page_login() -> Result<HttpResponse, MyError> {
     Ok(HttpResponse::Ok().content_type("text/html").body(
         templates::Home {
             body: &templates::Login {}.to_string(),

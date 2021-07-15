@@ -97,6 +97,9 @@ define! {
                     div[class="subscriptions"] {
 
                         div[class="subscription_category"] {
+                            a[href="/forms/rss/subscription"]{
+                                "New"
+                            }
                             a[href="/actions/filter_all_subscriptions"]{
                                 "All"
                             }
@@ -180,6 +183,35 @@ define! {
                 }
             }
         }
+    }
+    Subscribe() {
+        form[action="/rss/subscriptions",method="post","hx-boost"="true","hx-push-url"="true"] {
+            div[class="container"] {
+                label[for="category"]{
+                    b{
+                        "Category"
+                    }
+                }
+                input[type="text",placeholder="Enter Category",name="category",required=true]{}
 
+                label[for="title"]{
+                    b{
+                        "Title"
+                    }
+                }
+                input[type="text",placeholder="Enter Title",name="title",required=true]{}
+
+                label[for="url"]{
+                    b{
+                        "Url"
+                    }
+                }
+                input[type="text",placeholder="Enter Url",name="url",required=true]{}
+
+                button[type="submit"]{
+                    "Add New Subscription"
+                }
+            }
+        }
     }
 }

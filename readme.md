@@ -8,12 +8,14 @@
 - 2021-07-04T03:12:53Z Show Reads
 - 2021-07-04T03:12:53Z Daemon: Clean sessions
 - 2021-07-14T21:15:52Z Date from Rss
-- [ ] New Subscription
+- 2021-07-15T01:30:24Z New Subscription
 - [ ] Scraper
 - [ ] Atom
 - [ ] Served somewhere
 - [ ] Nesting of categories
 - [ ] Category Breadcrumbs
+- [ ] New Subscription GUI
+- [ ] New Scraper GUI
 - [ ] Better styling of articles
 - [ ] Keyboard Navigation
 - [ ] Animations

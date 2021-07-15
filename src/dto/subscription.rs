@@ -26,7 +26,10 @@ impl Subscription {
                 subscription_id,
                 title: item.title.unwrap_or_default(),
                 link: item.link.unwrap_or_default(),
-                pub_date: dbg!(dbg!(item.pub_date).as_ref().and_then(|x| parse_date(x)))
+                pub_date: item
+                    .pub_date
+                    .as_ref()
+                    .and_then(|x| parse_date(x))
                     .unwrap_or_else(SystemTime::now)
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .ok()

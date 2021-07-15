@@ -4,27 +4,37 @@ use crate::{clients::Clients, dto, server::MyError};
 use actix_web::{get, post, web, HttpResponse};
 use rss::Channel;
 use serde::Deserialize;
-use tracing::{info, instrument};
+use tracing::instrument;
 
 use super::{
     from_requests::{user_id::UserIdPart, user_preferences::UserPreferences},
     templates, wrap_body,
 };
 
-#[post("/subscriptions")]
+#[get("/forms/rss/subscription")]
+#[instrument]
+pub async fn page_rss_subscription_form(
+    UserIdPart(_user_id): UserIdPart,
+) -> Result<HttpResponse, MyError> {
+    Ok(HttpResponse::Ok().content_type("text/html").body(
+        templates::Home {
+            body: &templates::Subscribe {}.to_string(),
+        }
+        .to_string(),
+    ))
+}
+#[post("/rss/subscriptions")]
 #[instrument(skip(clients))]
 pub async fn new_subscription(
-    path: web::Form<SubscriptionForm>,
+    form: web::Form<SubscriptionForm>,
+    UserIdPart(user_id): UserIdPart,
     clients: web::Data<Clients>,
 ) -> Result<HttpResponse, MyError> {
-    info!("Starting a new subscription {:?}", path);
     let SubscriptionForm {
         category,
         title,
         url,
-    } = path.into_inner();
-
-    let user_id = dto::UserId(1);
+    } = form.into_inner();
 
     let content = reqwest::get(url.clone())
         .await
@@ -40,12 +50,14 @@ pub async fn new_subscription(
         dto::UserSubscription::insert(&category, &title, &subscription, &user_id, &clients.pool)
             .await?;
 
-    Ok(HttpResponse::Ok().json("Ok"))
+    Ok(HttpResponse::Found()
+        .append_header(("Location", "/"))
+        .finish())
 }
 
 #[get("/")]
 #[instrument(skip(clients))]
-pub async fn get_all_subscriptions(
+pub async fn page_all_subscriptions(
     clients: web::Data<Clients>,
     UserIdPart(user_id): UserIdPart,
     user_preference: UserPreferences,
