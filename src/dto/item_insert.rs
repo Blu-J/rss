@@ -2,7 +2,7 @@ use color_eyre::eyre::Result;
 use sqlx::{query, Executor, Sqlite};
 use tracing::instrument;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ItemInsert {
     pub subscription_id: i64,
     pub title: String,

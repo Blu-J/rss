@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 actix-files = "0.6.0-beta.5"
 actix-session = "0.4.1"
-actix-web = {version = "4.0.0-beta.6"}
+actix-web = {version = "4.0.0-beta.8"}
 ammonia = "3.1"
 async-trait = "0.1"
 chrono = "0.4"
@@ -36,6 +36,11 @@ sha3 = "0.9.1"
 markup = "0.12.2"
 voca_rs = "1.13.0"
 lru_time_cache = "0.11.11"
+actix-rt = "2.2"
+
+[dev_dependencies]
+replay-mocker = {git = "https://github.com/Blu-J/replay-mock", rev = "83c1eeaca72c6a822e4ccf07f1f547ae4567a43b"}
+# replay-mocker = {path="../replay-mock"}
 
 [profile.dev.package.backtrace]
 opt-level = 3

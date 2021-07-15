@@ -83,3 +83,39 @@ fn parse_date(date: &str) -> Option<SystemTime> {
     }
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use replay_mocker::{mocks::ReplayMock, MockServer};
+
+    use super::*;
+    #[actix_web::rt::test]
+    async fn test_get_items() {
+        let mock = MockServer::new()
+            .await
+            .mock(ReplayMock::from_file("./test/artifacts/sword_feed.json"))
+            .await;
+        let subscription = Subscription {
+            id: 0,
+            rss_feed: format!("http://{}/", mock.address),
+        };
+
+        let items = subscription.get_items().await.unwrap();
+        assert_eq!(items.len(), 10);
+        assert_eq!(&items[0].title, &"DXIII - Battlefruit");
+        assert_eq!(&items[0].link, &"https://swordscomic.com/comic/DXIII/");
+        assert!(items[0].pub_date > 1626309745);
+        assert_eq!(
+            items[0].author.clone().unwrap_or_default(),
+            "Matthew Wills".to_string()
+        );
+        assert_eq!(
+            items[0].description.clone().unwrap_or_default(),
+            "\n      <style>\n        .tag {\n          background-color: var(--tag-background-color);\n          margin: 1px 2px;\n          padding: 4px;\n          padding-left: 24px;\n          height: 16px;\n          line-height: 16px;\n          font-size: 12px;\n          text-align: center;\n          text-decoration: none;\n          display: inline-block;\n          background-image: var(--default-tag-icon);\n          background-size: 16px 16px;\n          background-position: 4px 4px;\n          background-repeat: no-repeat;\n        }\n      </style>\n      <img src=\"https://swordscomic.com/media/Swords513T.png\"></img>\n      <p><strong>Sea Captain:</strong> Draw your weapon!</p>\n\n<blockquote>\n  <p>The Captain pulls out his sword with a SHING! sound</p>\n</blockquote>\n\n<p><strong>Jolly Pirate:</strong> En garde!</p>\n\n<blockquote>\n  <p>The Jolly Pirate pulls out a banana with a WHIP! sound</p>\n</blockquote>\n\n<p><strong>Jolly Pirate:</strong> Whoops! Ha ha ha!</p>\n\n<blockquote>\n  <p>The Jolly Pirate peels the banana open with a PEEL! sound to reveal a sword blade inside</p>\n</blockquote>\n\n<p><strong>Jolly Pirate:</strong> En garde!</p>\n\n    ".to_string()
+        );
+        assert_eq!(
+            items[0].contents.clone().unwrap_or_default(),
+            "".to_string()
+        );
+    }
+}

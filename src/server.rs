@@ -45,8 +45,8 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
             )));
         HttpServer::new(move || {
             App::new()
-                .data(clients.clone())
-                .data(sessions.clone())
+                .app_data(clients.clone())
+                .app_data(sessions.clone())
                 .wrap(middleware::Compress::default())
                 .service(login_get)
                 .service(login_post)
