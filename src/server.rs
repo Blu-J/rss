@@ -84,8 +84,8 @@ impl error::ResponseError for MyError {
     fn error_response(&self) -> HttpResponse {
         warn!("actix response: {:?}", self);
         match self {
-            MyError::NotLoggedIn(x) => {
-                warn!("Redirecting:  {:?}", x);
+            MyError::NotLoggedIn(_x) => {
+                warn!("Redirecting");
                 HttpResponse::Found()
                     .append_header(("Location", "/login"))
                     .body("Not logged in")
