@@ -26,3 +26,6 @@
 - [ ] Search
 - [ ] Https
 - [ ] Import CSV?
+
+- [ ] Status of Rss?
+- [ ] Modify Subscription/ Scraper
