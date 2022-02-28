@@ -1,10 +1,11 @@
 use actix_web::{dev::Payload, web, FromRequest, HttpRequest};
 use color_eyre::eyre::eyre;
 use futures::{future::LocalBoxFuture, FutureExt};
+use sqlx::Encode;
 
 use crate::{server::MyError, session::SessionMap};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Encode)]
 pub struct UserIdPart(pub i64);
 
 impl<'a> FromRequest for UserIdPart {

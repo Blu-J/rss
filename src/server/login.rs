@@ -10,7 +10,7 @@ use crate::{
 };
 use actix_web::{cookie::Cookie, get, post, web, HttpResponse};
 use color_eyre::eyre::eyre;
-use maud::{html, Markup, PreEscaped, DOCTYPE};
+use maud::{html, Markup};
 use serde::Deserialize;
 use sqlx::query_file;
 use tracing::instrument;

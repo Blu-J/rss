@@ -51,6 +51,7 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .wrap(middleware::Compress::default())
                 .service(login::page)
                 .service(login::post)
+                .service(articles::articles_default)
                 .service(articles::all)
                 // .service(page_rss_subscription_form)
                 // .service(new_subscription)

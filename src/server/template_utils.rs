@@ -1,10 +1,5 @@
-use std::collections::HashMap;
-
 use ammonia::Builder;
-use maud::{html, Markup, PreEscaped, DOCTYPE};
-use voca_rs::case;
-
-use super::from_requests::user_preferences::ShowUnreads;
+use maud::{html, Markup, DOCTYPE};
 
 pub fn ammonia(s: &str) -> String {
     Builder::default()

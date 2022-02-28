@@ -3,13 +3,9 @@ CREATE TABLE users (
     username text NOT NULL,
     tags text
 );
-
 CREATE INDEX IF NOT EXISTS users_username_idx ON users (username);
-
-INSERT INTO users (id, username)
-    VALUES (0, 'dragondef');
-
-
+INSERT INTO users (username)
+VALUES ('dragondef');
 CREATE TABLE scraping_sites (
     id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
     user_id text NOT NULL,
@@ -18,23 +14,52 @@ CREATE TABLE scraping_sites (
     articles_sel text NOT NULL,
     title_sel text NOT NULL,
     link_sel text NOT NULL,
+    site_title text not null,
     image_sel text,
     description_sel text,
     comments_sel text,
     FOREIGN KEY(user_id) REFERENCES users(id)
 );
-
 CREATE INDEX IF NOT EXISTS scraping_sites_by_user_idx ON scraping_sites (user_id);
-
-INSERT INTO scraping_sites (user_id, every_seconds, url, articles_sel, title_sel, link_sel, description_sel, image_sel, comments_sel)
-    VALUES (0, 300, 'https://old.reddit.com', '.thing:not(.promoted)', 'a.title', 'a.title', NULL, 'a img', 'a.comments');
-
-
+INSERT INTO scraping_sites (
+        user_id,
+        site_title,
+        every_seconds,
+        url,
+        articles_sel,
+        title_sel,
+        link_sel,
+        description_sel,
+        image_sel,
+        comments_sel
+    )
+VALUES (
+        1,
+        "Old Reddit",
+        300,
+        'https://old.reddit.com',
+        '.thing:not(.promoted)',
+        'a.title',
+        'a.title',
+        NULL,
+        'a img',
+        'a.comments'
+    );
+CREATE TABLE site_tags (
+    id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+    site_id integer NOT NULL,
+    tag text NOT NULL,
+    UNIQUE(site_id, tag),
+    FOREIGN KEY(site_id) REFERENCES scraping_sites(id)
+);
+CREATE INDEX IF NOT EXISTS site_tags_by_site_idx ON site_tags (site_id);
+INSERT INTO site_tags (site_id, tag)
+VALUES (1, 'news');
 CREATE TABLE articles (
     id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
     site_id text NOT NULL,
-    date integer not null,
-    read_on integer,
+    date DATETIME not null,
+    read_on DATETIME,
     title text NOT NULL,
     href text NOT NULL,
     description text,
@@ -43,11 +68,7 @@ CREATE TABLE articles (
     UNIQUE(site_id, title),
     FOREIGN KEY(site_id) REFERENCES scraping_sites(id)
 );
-
-
 CREATE INDEX IF NOT EXISTS articles_sites_idx ON articles (site_id, date DESC);
-
-
 -- CREATE TABLE items (
 --     id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
 --     subscription_id integer NOT NULL,

@@ -1,6 +1,5 @@
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
-use tracing_subscriber::EnvFilter;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Settings {

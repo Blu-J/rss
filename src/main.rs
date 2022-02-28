@@ -1,35 +1,23 @@
 use scraper::{Html, Selector};
-use std::{
-    ops::Sub,
-    time::{Duration, SystemTime},
-};
+use std::time::{Duration, SystemTime};
 use tracing_subscriber::EnvFilter;
 
 use crate::{clients::Clients, server::spawn_server};
-use actix_web::rt::{
-    signal::{
-        ctrl_c,
-        unix::{signal, SignalKind},
-    },
-    spawn,
-    time::{self, timeout},
-};
 
-use chrono::Utc;
-use color_eyre::{owo_colors::Color, Report};
-use futures::{select, stream, FutureExt, StreamExt};
+use color_eyre::Report;
+use futures::FutureExt;
 
 use futures::TryStreamExt;
 use settings::Settings;
 use sqlx::query_file;
-use tokio_cron_scheduler::{Job, JobScheduler};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 pub mod clients;
 // pub mod dto;
 pub mod server;
 pub mod session;
 pub mod settings;
+pub mod utils;
 
 #[actix_web::main]
 async fn main() -> color_eyre::Result<()> {
@@ -141,10 +129,7 @@ fn spawn_scraper(clients: Clients) -> tokio::task::JoinHandle<()> {
                     };
                     let mut transaction = clients.pool.begin().await.unwrap();
                     for (href, title, description, image, comments) in collections {
-                        let unix_time = SystemTime::now()
-                            .duration_since(SystemTime::UNIX_EPOCH)
-                            .unwrap_or_default()
-                            .as_secs_f64();
+                        let unix_time = utils::unix_time() as u32;
                         query_file!(
                             "queries/article_insert.sql",
                             site_id,
