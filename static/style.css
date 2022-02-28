@@ -1,0 +1,35 @@
+:root {
+  --primary: #0070f3;
+  --primary-dark: #003674;
+}
+
+input[type="submit"],
+button[type="submit"],
+button:not([disabled]) {
+  background: var(--primary);
+}
+input[type="submit"]:hover,
+button[type="submit"]:hover,
+button:not([disabled]):hover {
+  background: var(--primary-dark);
+}
+
+dd + dt {
+  border-top: 1px solid var(--primary);
+}
+
+blockquote {
+  border-left: 1px solid var(--primary);
+}
+
+mark {
+  background: var(--primary);
+}
+
+a {
+  color: var(--primary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}

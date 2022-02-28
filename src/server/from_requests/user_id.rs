@@ -2,15 +2,14 @@ use actix_web::{dev::Payload, web, FromRequest, HttpRequest};
 use color_eyre::eyre::eyre;
 use futures::{future::LocalBoxFuture, FutureExt};
 
-use crate::{dto, server::MyError, session::SessionMap};
+use crate::{server::MyError, session::SessionMap};
 
 #[derive(Debug, Clone)]
-pub struct UserIdPart(pub dto::UserId);
+pub struct UserIdPart(pub String);
 
 impl<'a> FromRequest for UserIdPart {
     type Error = MyError;
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
-    type Config = ();
 
     #[inline]
     fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {

@@ -59,7 +59,6 @@ impl Default for UserPreferences {
 impl<'a> FromRequest for UserPreferences {
     type Error = MyError;
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
-    type Config = ();
 
     #[inline]
     fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {

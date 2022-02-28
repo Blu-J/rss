@@ -1,5 +1,6 @@
 use config::{Config, ConfigError, Environment, File};
 use serde::{Deserialize, Serialize};
+use tracing_subscriber::EnvFilter;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Settings {
@@ -12,14 +13,13 @@ pub struct Settings {
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
-        let mut s = Config::new();
+        let config_builder = Config::builder()
+            .add_source(File::with_name("./config/settings.toml").required(false))
+            .add_source(File::with_name("./config/settings.toml").required(false))
+            .add_source(File::with_name("./config/settings.yml").required(false))
+            .add_source(File::with_name("./config/settings.json").required(false))
+            .add_source(Environment::default().separator("__"));
 
-        s.merge(File::with_name("./config/settings.toml").required(false))?;
-        s.merge(File::with_name("./config/settings.yml").required(false))?;
-        s.merge(File::with_name("./config/settings.json").required(false))?;
-
-        s.merge(Environment::new().separator("__"))?;
-
-        s.try_into()
+        config_builder.build().unwrap().try_deserialize()
     }
 }

@@ -1,24 +1,25 @@
-use self::{
-    items::{get_full_item, get_full_item_part},
-    subscriptions::{new_subscription, page_all_subscriptions, page_rss_subscription_form},
-};
+// use self::{
+//     items::{get_full_item, get_full_item_part},
+//     subscriptions::{new_subscription, page_all_subscriptions, page_rss_subscription_form},
+// };
 use crate::{clients::Clients, session::SessionMap};
 use actix_web::{
-    body::Body, error, http::StatusCode, middleware, rt::spawn, web, App, HttpResponse, HttpServer,
+    body::MessageBody, error, http::StatusCode, middleware, rt::spawn, web, App, HttpResponse,
+    HttpServer,
 };
 use color_eyre::Report;
 use futures::lock::Mutex;
-use login::{login_post, page_login};
 use lru_time_cache::LruCache;
-use std::{fmt::Display, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tracing::warn;
 use uuid::Uuid;
 
-mod actions;
-mod items;
+// mod actions;
+// mod items;
 mod login;
-mod subscriptions;
-pub mod templates;
+// mod subscriptions;
+mod articles;
+pub mod template_utils;
 
 #[derive(Debug, thiserror::Error)]
 pub enum MyError {
@@ -48,21 +49,21 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .app_data(web::Data::new(clients.clone()))
                 .app_data(web::Data::new(sessions.clone()))
                 .wrap(middleware::Compress::default())
-                .service(page_login)
-                .service(page_all_subscriptions)
-                .service(page_rss_subscription_form)
-                .service(login_post)
-                .service(new_subscription)
-                .service(get_full_item)
-                .service(get_full_item_part)
-                .service(actions::action_mark_all_read)
-                .service(actions::filter_all_subscriptions)
-                .service(actions::filter_by_category)
-                .service(actions::filter_by_category_title)
-                .service(actions::expand_sidebar)
-                .service(actions::collapse_sidebar)
-                .service(actions::show_everything)
-                .service(actions::show_unreads)
+                .service(login::page)
+                .service(login::post)
+                .service(articles::all)
+                // .service(page_rss_subscription_form)
+                // .service(new_subscription)
+                // .service(get_full_item)
+                // .service(get_full_item_part)
+                // .service(actions::action_mark_all_read)
+                // .service(actions::filter_all_subscriptions)
+                // .service(actions::filter_by_category)
+                // .service(actions::filter_by_category_title)
+                // .service(actions::expand_sidebar)
+                // .service(actions::collapse_sidebar)
+                // .service(actions::show_everything)
+                // .service(actions::show_unreads)
                 .service(actix_files::Files::new("/static", "./static").show_files_listing())
         })
         .bind("0.0.0.0:8080")
@@ -73,12 +74,12 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
     })
 }
 
-fn wrap_body<A: Display>(wrapped: A) -> String {
-    templates::Home {
-        body: &format!("{}", wrapped),
-    }
-    .to_string()
-}
+// fn wrap_body<A: Display>(wrapped: A) -> String {
+//     templates::Home {
+//         body: &format!("{}", wrapped),
+//     }
+//     .to_string()
+// }
 
 impl error::ResponseError for MyError {
     fn error_response(&self) -> HttpResponse {
@@ -95,7 +96,7 @@ impl error::ResponseError for MyError {
                 warn!("Cannot Find ({}): {:?}", uuid, x);
                 HttpResponse::with_body(
                     self.status_code(),
-                    Body::from_message(format!("internal error {}", uuid)),
+                    (format!("internal error {}", uuid)).boxed(),
                 )
             }
             MyError::Internal(x) => {
@@ -103,12 +104,10 @@ impl error::ResponseError for MyError {
                 warn!("Internal Error ({}): {:?}", uuid, x);
                 HttpResponse::with_body(
                     self.status_code(),
-                    Body::from_message(format!("internal error {}", uuid)),
+                    (format!("internal error {}", uuid)).boxed(),
                 )
             }
-            _ => {
-                HttpResponse::with_body(self.status_code(), Body::from_message(format!("{}", self)))
-            }
+            _ => HttpResponse::with_body(self.status_code(), (format!("{}", self)).boxed()),
         }
     }
 

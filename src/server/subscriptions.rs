@@ -8,7 +8,7 @@ use tracing::instrument;
 
 use super::{
     from_requests::{user_id::UserIdPart, user_preferences::UserPreferences},
-    templates, wrap_body,
+    templates,
 };
 
 #[get("/forms/rss/subscription")]
