@@ -8,28 +8,28 @@ use crate::{
     server::template_utils::with_full_page,
     session::{Session, SessionMap},
 };
-use actix_web::{cookie::Cookie, get, post, web, HttpResponse};
-use color_eyre::eyre::eyre;
+use actix_web::{get, web, HttpResponse};
+
 use color_eyre::Result;
-use maud::{html, Markup, PreEscaped, DOCTYPE};
-use serde::Deserialize;
+use maud::{html, Markup};
 use sqlx::query_file;
 use tracing::instrument;
 
-use uuid::Uuid;
-
-use super::MyError;
+use super::{from_requests::user_id::UserIdPart, MyError};
 
 #[get("/articles")]
 #[instrument]
-pub async fn all(clients: web::Data<Clients>) -> Result<HttpResponse, MyError> {
+pub async fn all(
+    clients: web::Data<Clients>,
+    user_id_part: UserIdPart,
+) -> Result<HttpResponse, MyError> {
     Ok(HttpResponse::Ok()
         .content_type("text/html")
-        .body(with_full_page(articles_page(&clients).await?).into_string()))
+        .body(with_full_page(articles_page(&clients, user_id_part).await?).into_string()))
 }
 
-async fn articles_page(clients: &Clients) -> Result<Markup> {
-    let articles = query_file!("queries/articles.sql")
+async fn articles_page(clients: &Clients, user_id_part: UserIdPart) -> Result<Markup> {
+    let articles = query_file!("queries/articles_all.sql", user_id_part.0)
         .fetch_all(&clients.pool)
         .await?;
     Ok(html! {

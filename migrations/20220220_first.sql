@@ -1,43 +1,51 @@
 CREATE TABLE users (
     id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
     username text NOT NULL,
-    salt text NOT NULL
+    tags text
 );
 
 CREATE INDEX IF NOT EXISTS users_username_idx ON users (username);
 
-INSERT INTO users (id, username, salt)
-    VALUES (0, 'dragondef', 'random_salt');
+INSERT INTO users (id, username)
+    VALUES (0, 'dragondef');
 
 
 CREATE TABLE scraping_sites (
     id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-    username_x_sites text NOT NULL,
-    every_seconds number NOT NULL,
+    user_id text NOT NULL,
+    every_seconds integer NOT NULL,
     url text NOT NULL,
     articles_sel text NOT NULL,
     title_sel text NOT NULL,
     link_sel text NOT NULL,
-    description_sel text
+    image_sel text,
+    description_sel text,
+    comments_sel text,
+    FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
-CREATE INDEX IF NOT EXISTS scraping_sites_x_user_idx ON scraping_sites (id, username_x_sites);
+CREATE INDEX IF NOT EXISTS scraping_sites_by_user_idx ON scraping_sites (user_id);
 
-INSERT INTO scraping_sites (username_x_sites, every_seconds, url, articles_sel, title_sel, link_sel, description_sel)
-    VALUES ('dragondefXSite', 300, 'https://old.reddit.com', '.thing:not(.promoted)', 'a.title', 'a.title', NULL);
+INSERT INTO scraping_sites (user_id, every_seconds, url, articles_sel, title_sel, link_sel, description_sel, image_sel, comments_sel)
+    VALUES (0, 300, 'https://old.reddit.com', '.thing:not(.promoted)', 'a.title', 'a.title', NULL, 'a img', 'a.comments');
 
 
 CREATE TABLE articles (
     id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-    username_x_article text NOT NULL,
-    date number not null,
+    site_id text NOT NULL,
+    date integer not null,
+    read_on integer,
     title text NOT NULL,
     href text NOT NULL,
     description text,
-    UNIQUE(username_x_article, title)
+    image_src text,
+    comments_href text,
+    UNIQUE(site_id, title),
+    FOREIGN KEY(site_id) REFERENCES scraping_sites(id)
 );
 
-CREATE INDEX IF NOT EXISTS articles_x_user_idx ON articles (id, username_x_article);
+
+CREATE INDEX IF NOT EXISTS articles_sites_idx ON articles (site_id, date DESC);
 
 
 -- CREATE TABLE items (

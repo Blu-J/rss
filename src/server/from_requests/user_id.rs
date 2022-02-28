@@ -5,7 +5,7 @@ use futures::{future::LocalBoxFuture, FutureExt};
 use crate::{server::MyError, session::SessionMap};
 
 #[derive(Debug, Clone)]
-pub struct UserIdPart(pub String);
+pub struct UserIdPart(pub i64);
 
 impl<'a> FromRequest for UserIdPart {
     type Error = MyError;
@@ -24,7 +24,7 @@ impl<'a> FromRequest for UserIdPart {
                     .get(&session.to_string())
                     .ok_or_else(|| eyre!("No cookie in sessions"))?;
 
-                Ok(Self(user_id.user_id().clone()))
+                Ok(Self(user_id.user_id()))
             })
             .map(|x| x.map_err(MyError::NotLoggedIn));
         Box::pin(value)

@@ -12,6 +12,7 @@ use actix_web::{cookie::Cookie, get, post, web, HttpResponse};
 use color_eyre::eyre::eyre;
 use maud::{html, Markup, PreEscaped, DOCTYPE};
 use serde::Deserialize;
+use sqlx::query_file;
 use tracing::instrument;
 
 use uuid::Uuid;
@@ -21,7 +22,6 @@ use super::MyError;
 #[derive(Clone, Deserialize)]
 pub struct LoginForm {
     username: String,
-    password: String,
 }
 
 impl std::fmt::Debug for LoginForm {
@@ -47,32 +47,36 @@ pub async fn post(
     login_form: web::Form<LoginForm>,
     clients: web::Data<Clients>,
 ) -> Result<HttpResponse, MyError> {
-    // // let mut session_map = session_maps.lock().await;
-    // // let user = User::fetch(&clients.pool, &login_form.username)
-    // //     .await
-    // //     .map_err(MyError::CannotFind)?;
+    let user = query_file!("queries/user_find.sql", login_form.username)
+        .fetch_optional(&clients.pool)
+        .await
+        .map_err(|x| MyError::CannotFind(x.into()))?;
 
-    // if !user.passwords_match(&login_form.password) {
-    return Err(MyError::CannotFind(eyre!("Cannot find")));
-    // }
+    let user = match user {
+        Some(user) => user,
+        None => return Err(MyError::CannotFind(eyre!("Cannot find"))),
+    };
 
-    // let ssid = Uuid::new_v4().to_string();
-    // session_map.insert(ssid.clone(), Session::new((*user).clone()));
-    // Ok(HttpResponse::Found()
-    //     .cookie(
-    //         Cookie::build("ssid", ssid)
-    //             .path("/")
-    //             .secure(clients.settings.secure)
-    //             .http_only(true)
-    //             .expires(Some(
-    //                 SystemTime::now()
-    //                     .add(Duration::from_secs(clients.settings.time_of_cookies_s))
-    //                     .into(),
-    //             ))
-    //             .finish(),
-    //     )
-    //     .append_header(("Location", "/"))
-    //     .finish())
+    let ssid = Uuid::new_v4().to_string();
+    session_maps
+        .lock()
+        .await
+        .insert(ssid.clone(), Session::new(user.id));
+    Ok(HttpResponse::Found()
+        .cookie(
+            Cookie::build("ssid", ssid)
+                .path("/")
+                .secure(clients.settings.secure)
+                .http_only(true)
+                .expires(Some(
+                    SystemTime::now()
+                        .add(Duration::from_secs(clients.settings.time_of_cookies_s))
+                        .into(),
+                ))
+                .finish(),
+        )
+        .append_header(("Location", "/"))
+        .finish())
 }
 
 fn login_form() -> Markup {
@@ -84,7 +88,6 @@ fn login_form() -> Markup {
             form hx-post="/login" {
                 fieldset {
                     input."" type="text" name="username" placeholder="Username";
-                    input."" type="password" name="password" placeholder="Password";
 
                     button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" {
                         "Login"

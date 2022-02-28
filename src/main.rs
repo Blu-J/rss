@@ -38,50 +38,8 @@ async fn main() -> color_eyre::Result<()> {
     let clients = Clients::new(Settings::new().unwrap()).await?;
 
     let server = spawn_server(clients.clone());
-    let scraper = spawn_scraper(clients.clone());
-    // let task2 = spawn(async move {
-    //     async {
-    //         let mut sigup = signal(SignalKind::hangup())?;
-    //         loop {
-    //             match select! {
-    //                 x = timeout(Duration::from_secs(clients.settings.time_of_polling_items + 60), async {
-    //                     let start = Utc::now();
-    //                     let items_to_insert: Vec<_> = stream::iter(dto::Subscription::fetch_all(&clients.pool).await?.into_iter().map(|subscription| async move{
-    //                         subscription.get_items().await
-    //                     })).buffer_unordered(10).filter_map(|x| async {match x {
-    //                         Ok(x) => Some(x),
-    //                         Err(e) => {
-    //                             warn!("Ran into issues getting rss: {:?}", e);
-    //                             None
-    //                         }
-    //                     }}).concat().await;
-    //                     let mut transaction = clients.pool.begin().await?;
-    //                     for item in items_to_insert.iter() {
-    //                         item.insert(&mut transaction).await?;
-    //                     }
-    //                     transaction.commit().await?;
-    //                     let duration = Utc::now().sub(start);
-    //                     info!("Time to insert {} items: {}", items_to_insert.len(), duration);
-
-    //                     time::sleep(Duration::from_secs(clients.settings.time_of_polling_items)).await;
-    //                     Ok::<_, Report>(())
-    //                 }).fuse() => x,
-    //                 _ = ctrl_c().fuse() => break,
-    //                 _ = sigup.recv().fuse() => break,
-    //             } {
-    //                 Err(e) => {error!("Item Insert Daemon timeout: {:?}", e);},
-    //                 Ok(Err(e)) => {error!("Item Insert Daemon error: {:?}", e);},
-    //                 _ => ()
-    //             };
-    //         }
-
-    //         Ok::<_, Report>(())
-    //     }
-    //     .await
-    //     .expect("Running in task 2");
-    // });
+    let _ = spawn_scraper(clients.clone());
     server.await?;
-    // task2.await?;
     Ok(())
 }
 fn install_tracing() -> color_eyre::Result<()> {
@@ -95,9 +53,6 @@ fn install_tracing() -> color_eyre::Result<()> {
     let filter_layer = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new("rss=info,warn"))
         .unwrap();
-    // let filter_layer =
-    //     EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("rss=info,warn"))?;
-
     tracing_subscriber::registry()
         .with(filter_layer)
         .with(fmt_layer)
@@ -108,16 +63,23 @@ fn install_tracing() -> color_eyre::Result<()> {
 
 fn spawn_scraper(clients: Clients) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        let mut rows = query_file!("queries/all_sites.sql").fetch(&clients.pool);
+        info!("Starting scraper");
+        let mut rows = query_file!("queries/sites_all.sql").fetch(&clients.pool);
         while let Some(row) = rows.try_next().await.unwrap() {
             let url: reqwest::Url = row.url.parse().unwrap();
             let row_seconds = row.every_seconds as u64;
             let sleep_time = Duration::from_secs(row_seconds);
+            let site_id = row.id;
             let articles_sel = Selector::parse(&row.articles_sel).unwrap();
             let title_sel = Selector::parse(&row.title_sel).unwrap();
             let link_sel = Selector::parse(&row.link_sel).unwrap();
             let description_sel = row
                 .description_sel
+                .as_ref()
+                .map(|x| Selector::parse(x).unwrap());
+            let image_sel = row.image_sel.as_ref().map(|x| Selector::parse(x).unwrap());
+            let comments_sel = row
+                .comments_sel
                 .as_ref()
                 .map(|x| Selector::parse(x).unwrap());
             let clients = clients.clone();
@@ -162,24 +124,36 @@ fn spawn_scraper(clients: Clients) -> tokio::task::JoinHandle<()> {
                                     .and_then(|sel| element.select(sel).next())
                                     .and_then(|x| x.text().next())
                                     .map(|x| x.to_string());
+                                let image: Option<String> = image_sel
+                                    .as_ref()
+                                    .and_then(|sel| element.select(sel).next())
+                                    .and_then(|x| x.value().attr("src"))
+                                    .map(|x| x.to_string());
+                                let comments: Option<String> = comments_sel
+                                    .as_ref()
+                                    .and_then(|sel| element.select(sel).next())
+                                    .and_then(|x| x.value().attr("href"))
+                                    .map(|x| x.to_string());
 
-                                Some((href, title.to_string(), description))
+                                Some((href, title.to_string(), description, image, comments))
                             })
                             .collect::<Vec<_>>()
                     };
                     let mut transaction = clients.pool.begin().await.unwrap();
-                    for (href, title, description) in collections {
+                    for (href, title, description, image, comments) in collections {
                         let unix_time = SystemTime::now()
                             .duration_since(SystemTime::UNIX_EPOCH)
                             .unwrap_or_default()
                             .as_secs_f64();
                         query_file!(
-                            "queries/insert_article.sql",
-                            "test",
+                            "queries/article_insert.sql",
+                            site_id,
                             unix_time,
                             title,
                             href,
-                            description
+                            description,
+                            image,
+                            comments
                         )
                         .execute(&mut transaction)
                         .await
@@ -187,7 +161,6 @@ fn spawn_scraper(clients: Clients) -> tokio::task::JoinHandle<()> {
                         .unwrap_or_else(|_| ());
                     }
                     transaction.commit().await.unwrap();
-                    // println!("Response is {}", text);
                 }
             });
         }

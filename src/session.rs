@@ -9,12 +9,12 @@ pub type SessionMap = Arc<Mutex<LruCache<String, Session>>>;
 
 #[derive(Debug, Clone)]
 pub struct Session {
-    user_id: String,
+    user_id: i64,
     date: SystemTime,
 }
 
 impl Session {
-    pub fn new(user_id: String) -> Self {
+    pub fn new(user_id: i64) -> Self {
         Self {
             user_id,
             date: SystemTime::now(),
@@ -22,8 +22,8 @@ impl Session {
     }
 
     /// Get a reference to the session's user id.
-    pub fn user_id(&self) -> &String {
-        &self.user_id
+    pub fn user_id(&self) -> i64 {
+        self.user_id
     }
 
     /// Get a reference to the session's date.
