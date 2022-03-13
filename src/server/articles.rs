@@ -1,6 +1,10 @@
 use std::time::{Duration, SystemTime};
 
-use crate::{clients::Clients, server::template_utils::with_full_page, utils};
+use crate::{
+    clients::Clients,
+    server::template_utils::{with_full_page, TAG_PREFERENCE},
+    utils,
+};
 use actix_web::{get, web, HttpResponse};
 
 use chrono::{DateTime, NaiveDateTime, Utc};
@@ -29,17 +33,32 @@ pub async fn articles_default(
     clients: web::Data<Clients>,
     user_id_part: UserIdPart,
 ) -> Result<HttpResponse, MyError> {
-    let user = query_file!("queries/user_by_id.sql", user_id_part.0)
-        .fetch_one(&clients.pool)
-        .await
-        .map_err(|x| MyError::CannotFind(x.into()))?;
-    let articles = match user.tags {
+    let user_tags = query_file!(
+        "queries/preferences_get.sql",
+        user_id_part.0,
+        TAG_PREFERENCE
+    )
+    .fetch_optional(&clients.pool)
+    .await
+    .map_err(|x| MyError::CannotFind(x.into()))?
+    .map(|x| x.value)
+    .and_then(|x| {
+        let tags: Vec<String> = x.trim().split(' ').map(|x| x.to_owned()).collect();
+        if tags.is_empty() {
+            None
+        } else {
+            Some(tags)
+        }
+    });
+    let mut title = "All Articles".to_string();
+    let articles = match user_tags {
         None => query_file_as!(Article, "queries/articles_all.sql", user_id_part.0)
             .fetch_all(&clients.pool)
             .await
             .map_err(|x| MyError::CannotFind(x.into()))?,
         Some(tags) => {
-            let items = serde_json::to_string(&tags.split(' ').collect::<Vec<_>>()).unwrap();
+            title = format!("Articles with tags: {}", tags.join(", "));
+            let items = serde_json::to_string(&tags).unwrap();
             query_file_as!(
                 Article,
                 "queries/articles_by_tags.sql",
@@ -54,7 +73,7 @@ pub async fn articles_default(
 
     Ok(HttpResponse::Ok()
         .content_type("text/html")
-        .body(with_full_page(articles_page(&articles).await?).into_string()))
+        .body(with_full_page(html! {h2{(title)}}, articles_page(&articles).await?).into_string()))
 }
 
 #[instrument]
@@ -67,45 +86,40 @@ pub async fn all(
         .fetch_all(&clients.pool)
         .await
         .map_err(|x| MyError::CannotFind(x.into()))?;
-    Ok(HttpResponse::Ok()
-        .content_type("text/html")
-        .body(with_full_page(articles_page(&articles).await?).into_string()))
+    Ok(HttpResponse::Ok().content_type("text/html").body(
+        with_full_page(html! {h2{"All Articles"}}, articles_page(&articles).await?).into_string(),
+    ))
 }
 
 async fn articles_page(articles: &[Article]) -> Result<Markup> {
     Ok(html! {
-        header {
-            h1 { "Articles" }
-        }
-        main {
-            @for article in articles {
-                a.feed  href=(article.href) {
-                    .figure {
-                        @if let Some(src) = &article.image_src {
-                            img src=(src);
-                        }
+        @for article in articles {
+            a.feed  href=(article.href) {
+                .figure {
+                    @if let Some(src) = &article.image_src {
+                        img src=(src);
                     }
-                    .head {
-                        (article.title)
+                }
+                .head {
+                    (article.title)
+                }
+                .body {
+                    @if let Some(body) = &article.description {
+                        (body)
                     }
-                    .body {
-                        @if let Some(body) = &article.description {
-                            (body)
-                        }
-                    }
-                    .footer{
+                }
+                .footer{
 
-                        (article.site_title) " / "
-                        div title=(format_date(article.date)) {
-                            (format_ago(article.date))
+                    (article.site_title) " / "
+                    div title=(format_date(article.date)) {
+                        (format_ago(article.date))
+                    }
+                    @if let Some(href) = &article.comments_href {
+                        a href=(href) {
+                            "Comments"
                         }
-                        @if let Some(href) = &article.comments_href {
-                            a href=(href) {
-                                "Comments"
-                            }
-                        } @else {
-                            "No Comments"
-                        }
+                    } @else {
+                        "No Comments"
                     }
                 }
             }

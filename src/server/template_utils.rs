@@ -1,6 +1,7 @@
 use ammonia::Builder;
-use maud::{html, Markup, DOCTYPE};
+use maud::{html, Markup, PreEscaped, DOCTYPE};
 
+pub const TAG_PREFERENCE: &str = "tags";
 pub fn ammonia(s: &str) -> String {
     Builder::default()
         .set_tag_attribute_value("img", "loading", "lazy")
@@ -8,7 +9,7 @@ pub fn ammonia(s: &str) -> String {
         .to_string()
 }
 
-pub fn with_full_page(body: Markup) -> Markup {
+pub fn with_full_page(title: Markup, body: Markup) -> Markup {
     html! {
         html {
             (DOCTYPE)
@@ -24,10 +25,28 @@ pub fn with_full_page(body: Markup) -> Markup {
                 script async[true] src="/static/htmx.min.js" {};
 
             }
-            body {
-                (body)
+            body hx-boost="true" {
+                header {
+                    nav {
+                        h1 {
+                            a href="/" {
+                                "Articles"
+                            }
+                        }
+                        input type="checkbox" id="menu-toggle";
+                        label for="menu-toggle"{
+                            (PreEscaped("&#9776;"))
+                        }
+                        a href="/sites" { "Sites" }
+                        a href="/tags" { "tags" }
+                    }
+                    (title)
+                }
+                main {
+                        (body)
+                    }
+                }
             }
-        }
     }
 }
 // fn item<'a>(

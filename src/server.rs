@@ -19,6 +19,8 @@ use uuid::Uuid;
 mod login;
 // mod subscriptions;
 mod articles;
+mod sites;
+mod tags;
 pub mod template_utils;
 
 #[derive(Debug, thiserror::Error)]
@@ -53,18 +55,9 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .service(login::post)
                 .service(articles::articles_default)
                 .service(articles::all)
-                // .service(page_rss_subscription_form)
-                // .service(new_subscription)
-                // .service(get_full_item)
-                // .service(get_full_item_part)
-                // .service(actions::action_mark_all_read)
-                // .service(actions::filter_all_subscriptions)
-                // .service(actions::filter_by_category)
-                // .service(actions::filter_by_category_title)
-                // .service(actions::expand_sidebar)
-                // .service(actions::collapse_sidebar)
-                // .service(actions::show_everything)
-                // .service(actions::show_unreads)
+                .service(tags::tags)
+                .service(tags::set_tags)
+                .service(sites::all)
                 .service(actix_files::Files::new("/static", "./static").show_files_listing())
         })
         .bind("0.0.0.0:8080")

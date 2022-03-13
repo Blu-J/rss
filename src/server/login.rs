@@ -38,7 +38,7 @@ impl std::fmt::Debug for LoginForm {
 pub async fn page() -> Result<HttpResponse, MyError> {
     Ok(HttpResponse::Ok()
         .content_type("text/html")
-        .body(with_full_page(login_form()).into_string()))
+        .body(with_full_page(html! {}, login_form()).into_string()))
 }
 #[post("/login")]
 #[instrument(skip())]
@@ -81,17 +81,12 @@ pub async fn post(
 
 fn login_form() -> Markup {
     html! {
-        header {
-            h1 { "Login" }
-        }
-        main {
-            form hx-post="/login" {
-                fieldset {
-                    input."" type="text" name="username" placeholder="Username";
+        form action="/login"  method="post" {
+            fieldset {
+                input."" type="text" name="username" placeholder="Username";
 
-                    button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" {
-                        "Login"
-                    }
+                button type="submit" {
+                    "Login"
                 }
             }
         }
