@@ -62,7 +62,7 @@ pub async fn post(
         .lock()
         .await
         .insert(ssid.clone(), Session::new(user.id));
-    Ok(HttpResponse::Found()
+    Ok(HttpResponse::SeeOther()
         .cookie(
             Cookie::build("ssid", ssid)
                 .path("/")
@@ -81,7 +81,7 @@ pub async fn post(
 
 fn login_form() -> Markup {
     html! {
-        form action="/login"  method="post" {
+        form action="/login"  method="post"  hx-push-url="/" {
             fieldset {
                 input."" type="text" name="username" placeholder="Username";
 

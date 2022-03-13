@@ -94,32 +94,37 @@ pub async fn all(
 async fn articles_page(articles: &[Article]) -> Result<Markup> {
     Ok(html! {
         @for article in articles {
-            a.feed  href=(article.href) {
+            .article {
                 .figure {
                     @if let Some(src) = &article.image_src {
                         img src=(src);
                     }
                 }
-                .head {
-                    (article.title)
-                }
-                .body {
-                    @if let Some(body) = &article.description {
-                        (body)
-                    }
-                }
-                .footer{
-
-                    (article.site_title) " / "
-                    div title=(format_date(article.date)) {
-                        (format_ago(article.date))
-                    }
-                    @if let Some(href) = &article.comments_href {
-                        a href=(href) {
-                            "Comments"
+                .non-figure {
+                    .head {
+                        a.feed  href=(article.href) {
+                            (article.title)
                         }
-                    } @else {
-                        "No Comments"
+                    }
+                    .body {
+                        @if let Some(body) = &article.description {
+                            (body)
+                        }
+                    }
+                    .footer{
+
+                        (article.site_title) " / "
+                        div title=(format_date(article.date)) {
+                            (format_ago(article.date))
+                        }
+                        @if let Some(href) = &article.comments_href {
+                            "/"
+                            a href=(href) {
+                                "Comments"
+                            }
+                        } @else {
+                            "/ No Comments"
+                        }
                     }
                 }
             }

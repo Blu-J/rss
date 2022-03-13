@@ -39,6 +39,15 @@ pub enum MyError {
     NotLoggedIn(Report),
 }
 
+impl MyError {
+    fn internal(error: impl Into<Report>) -> Self {
+        MyError::Internal(error.into())
+    }
+    fn bad_param(param: &str, value: &str) -> Self {
+        MyError::BadParam(param.to_string(), value.to_string())
+    }
+}
+
 pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
     spawn(async move {
         let sessions: SessionMap =
@@ -57,7 +66,10 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .service(articles::all)
                 .service(tags::tags)
                 .service(tags::set_tags)
+                .service(sites::new_site)
+                .service(sites::update_site)
                 .service(sites::all)
+                .service(sites::post_sites)
                 .service(actix_files::Files::new("/static", "./static").show_files_listing())
         })
         .bind("0.0.0.0:8080")

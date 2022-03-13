@@ -11,7 +11,7 @@ INSERT INTO users (username)
 -- Scraping Sites
 CREATE TABLE scraping_sites (
     id integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-    user_id text NOT NULL,
+    user_id integer NOT NULL,
     every_seconds integer NOT NULL,
     url text NOT NULL,
     articles_sel text NOT NULL,

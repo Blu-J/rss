@@ -64,18 +64,16 @@ pub async fn tags(
                 }
             },
             html! {
-                form action="/set_sites" method="post" {
+                form action="/set_tags" method="post" {
                     fieldset {
                         button type="submit" name="action" value="all" { "All Tags" }
 
-                        label {
-                            "Tags";
-                            select name="tags" multiple {
-                                @for (tag, count) in tags {
-                                    option { (format!("{}: ({})",tag, count)) }
-                                }
+                        h2 {"Tags"}
+                        @for (tag, count) in tags {
+                            label {
+                                input type="radio" name="tags" value=(tag) { }
+                                (format!("{}: ({})",tag, count))
                             }
-
                         }
 
 
@@ -109,10 +107,6 @@ pub async fn set_tags(
         .to_string();
     match login_form.action.as_str() {
         "set" if !all_tags.is_empty() => {
-            println!(
-                "Should be setting some new preferences as tags: {}",
-                all_tags
-            );
             query_file!(
                 "queries/preferences_set.sql",
                 user_id_part.0,
@@ -124,7 +118,6 @@ pub async fn set_tags(
             .map_err(|x| MyError::Internal(x.into()))?;
         }
         _ => {
-            println!("Setting all tags");
             query_file!(
                 "queries/preferences_delete.sql",
                 user_id_part.0,
@@ -136,7 +129,7 @@ pub async fn set_tags(
         }
     }
 
-    Ok(HttpResponse::Ok()
-        .content_type("text/html")
-        .body(with_full_page(html! {h2{"Nothing"}}, html! { "NOTHING YET "}).into_string()))
+    Ok(HttpResponse::SeeOther()
+        .append_header(("Location", "/"))
+        .finish())
 }
