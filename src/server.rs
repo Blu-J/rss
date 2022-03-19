@@ -66,6 +66,7 @@ pub fn spawn_server(clients: Clients) -> tokio::task::JoinHandle<()> {
                 .service(articles::all)
                 .service(tags::tags)
                 .service(tags::set_tags)
+                .service(sites::duplicate_new_site)
                 .service(sites::new_site)
                 .service(sites::update_site)
                 .service(sites::all)

@@ -64,22 +64,20 @@ pub async fn tags(
                 }
             },
             html! {
-                form action="/set_tags" method="post" {
-                    fieldset {
-                        button type="submit" name="action" value="all" { "All Tags" }
+                form.orient-vertical  action="/set_tags" method="post" {
+                    button type="submit" name="action" value="all" { "All Tags" }
 
-                        h2 {"Tags"}
-                        @for (tag, count) in tags {
-                            label {
-                                input type="radio" name="tags" value=(tag) { }
-                                (format!("{}: ({})",tag, count))
-                            }
+                    h2 {"Tags"}
+                    @for (tag, count) in tags {
+                        label {
+                            input type="radio" name="tags" value=(tag) { }
+                            (format!("{}: ({})",tag, count))
                         }
+                    }
 
 
-                        button type="submit" name="action" value="set" {
-                            "Set Tags"
-                        }
+                    button type="submit" name="action" value="set" {
+                        "Set Tags"
                     }
                 }
 

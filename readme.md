@@ -1,31 +1,5 @@
 ### Features / TODO
 
-- 2021-07-03T20:50:43Z All Items as read
-- 2021-07-03T20:50:43Z User Login + Users
-- 2021-07-03T20:50:43Z Single Items as read
-- 2021-07-03T23:21:42Z User Preferences as cookies
-- 2021-07-03T23:21:42Z Filtering of items
-- 2021-07-04T03:12:53Z Show Reads
-- 2021-07-04T03:12:53Z Daemon: Clean sessions
-- 2021-07-14T21:15:52Z Date from Rss
-- 2021-07-15T01:30:24Z New Subscription
-- [ ] Scraper
-- [ ] Atom
-- [ ] Served somewhere
-- [ ] Nesting of categories
-- [ ] Category Breadcrumbs
-- [ ] New Subscription GUI
-- [ ] New Scraper GUI
-- [ ] Better styling of articles
-- [ ] Keyboard Navigation
-- [ ] Animations
-  - [ ] Clicking Element will expand to whole page or target?
-  - [ ] Resizes look nicer than drop
-- [ ] Creating Users/ Signup
-- [ ] Subscribing to Places
-- [ ] Search
-- [ ] Https
-- [ ] Import CSV?
-
-- [ ] Status of Rss?
-- [ ] Modify Subscription/ Scraper
+- [ ] Infini scroll articles
+- [ ] Tags tell how many articles, upper bounded
+- [ ] Search articles

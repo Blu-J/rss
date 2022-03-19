@@ -1,54 +1,93 @@
+/* Would love https://css-tricks.com/dark-modes-with-css/ */
+
+/* ---- Overall Style  -----*/
+
 :root {
-  --primary: #0070f3;
-  --primary-dark: #003674;
+  --shadowed-background: aliceblue;
+  --void-color: rgb(0, 0, 70);
 }
 
-input[type="submit"],
-button[type="submit"],
-button:not([disabled]) {
-  background: var(--primary);
-}
-input[type="submit"]:hover,
-button[type="submit"]:hover,
-button:not([disabled]):hover {
-  background: var(--primary-dark);
+body {
+  margin: 0;
+  background-color: var(--void-color);
 }
 
-dd + dt {
-  border-top: 1px solid var(--primary);
+.shadowed {
+  box-shadow: 1rem 1rem 1rem 1rem rgba(0, 0, 0, 0.7);
+  margin: 1rem;
+  background-color: var(--shadowed-background);
+  padding: 1rem 0;
 }
 
-blockquote {
-  border-left: 1px solid var(--primary);
+body head.shadowed {
+  position: sticky;
+  width: 100%;
+  margin: 0;
+  top: 0;
 }
 
-mark {
-  background: var(--primary);
+body main.shadowed {
+  margin: 0 auto;
+  width: 60rem;
 }
 
-a {
-  color: var(--primary);
+form {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+form > *,
+form * + * {
+  margin: 1rem 0.5rem;
+  padding: 0.3rem;
+}
+form input[type="text"],
+form input[type="number"] {
+  box-shadow: 0 0 2rem 0.5rem rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+}
+form > label {
+  width: 100%;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
+.orient-vertical {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
 }
+.orient-vertical > * {
+  margin: 1rem 0.5rem;
+  width: 100%;
+}
+
+.orient-horizontal {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+}
+.orient-horizontal * + * {
+  margin-left: 1rem;
+}
+
+/* ----- Articles ------ */
 
 .article {
   display: flex;
-
-  height: 11rem;
+  height: 140px;
   padding: 1rem;
 }
 .article + .article {
-  margin-top: 2rem;
   border-top: 1px solid var(--primary);
 }
 .article .figure {
   flex: 0 0 auto;
-  height: 140;
-  width: 140;
+  height: 140px;
+  width: 140px;
   margin-right: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #00008b;
 }
 .article .non-figure {
   flex: 1;
@@ -57,10 +96,75 @@ a {
 }
 .article .non-figure .head,
 .article .non-figure .body {
-  flex: 1;
+  flex: 0;
 }
 .article .non-figure .footer {
-  flex: 0 0 auto;
-  height: 3rem;
+  flex: 1 0 auto;
+  align-self: flex-end;
   display: flex;
+  align-items: flex-end;
+}
+
+/* === Sites ==== */
+
+.site.shadowed {
+  display: flex;
+  width: 100%;
+}
+.site > a {
+  flex: 1;
+}
+.site .duplicate {
+  align-self: flex-end;
+}
+
+/* Utils */
+
+/* Sausage Links Styling */
+.sausage-links {
+  position: relative;
+}
+.sausage-links:before,
+.sausage-links:after {
+  content: "";
+  height: calc(100% - 2em);
+  pointer-events: none;
+  position: absolute;
+  top: 1em;
+  width: 10px;
+  z-index: 2;
+}
+.sausage-links:before {
+  background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, white 100%);
+  right: 0;
+}
+.sausage-links:after {
+  background: linear-gradient(to left, rgba(255, 255, 255, 0) 0%, white 100%);
+  left: 0;
+}
+.sausage-links ul {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow: auto;
+  padding: 1em 0;
+  list-style-type: none;
+}
+.sausage-links ul li {
+  padding: 0 8px;
+  white-space: nowrap;
+}
+.sausage-links ul li a,
+.sausage-links ul li a:visited {
+  border: 1px solid lightgrey;
+  border-radius: 50px;
+  color: dodgerblue;
+  display: inline-block;
+  padding: 10px 15px;
+  text-decoration: none;
+}
+.sausage-links ul li a:hover,
+.sausage-links ul li a:visited:hover {
+  background: #ebf5ff;
+  border-color: dodgerblue;
+  box-shadow: 0 2px 4px rgba(0, 90, 156, 0.15);
 }

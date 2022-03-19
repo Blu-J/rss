@@ -82,12 +82,13 @@ pub async fn post(
 fn login_form() -> Markup {
     html! {
         form action="/login"  method="post"  hx-push-url="/" {
-            fieldset {
+            label {
+                "Username: "
                 input."" type="text" name="username" placeholder="Username";
+            }
 
-                button type="submit" {
-                    "Login"
-                }
+            button type="submit" {
+                "Login"
             }
         }
     }

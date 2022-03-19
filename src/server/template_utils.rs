@@ -11,38 +11,45 @@ pub fn ammonia(s: &str) -> String {
 
 pub fn with_full_page(title: Markup, body: Markup) -> Markup {
     html! {
-        html {
-            (DOCTYPE)
+        (DOCTYPE)
+        html lang="en" {
             head {
-                meta http-equiv="Content-Type" content="text/html" charset="UTF-8";
                 title { "RSS" }
+                meta http-equiv="Content-Type" content="text/html" charset="UTF-8";
+                meta name="description" content="Aggregator for information that is scrapped from various sources.";
                 meta name="referrer" content="origin";
                 meta name="viewport" content="width=device-width, initial-scale=1.0";
                 link rel="icon" href="/favicon.ico";
 
-                link rel="stylesheet" href="/static/bahunya.css";
-                link rel="stylesheet" href="/static/style.css";
-                script async[true] src="/static/htmx.min.js" {};
+                link async rel="stylesheet" href="/static/style.css";
+                script defer src="/static/htmx.min.js" {};
 
             }
-            body hx-boost="true" {
-                header {
-                    nav {
-                        h1 {
-                            a href="/" {
-                                "Articles"
+            body hx-boost="true" hx-push-url="true"  {
+                header.shadowed {
+                    h1 {
+                        a href="/" {
+                            "Articles"
+                        }
+                    }
+                    nav.sausage-links {
+                        ul {
+                            li {
+                                a href="/" {
+                                    "Articles"
+                                }
+                            }
+                            li {
+                                a href="/sites" { "Sites" }
+                            }
+                            li {
+                                a href="/tags" { "tags" }
                             }
                         }
-                        input type="checkbox" id="menu-toggle";
-                        label for="menu-toggle"{
-                            (PreEscaped("&#9776;"))
-                        }
-                        a href="/sites" { "Sites" }
-                        a href="/tags" { "tags" }
                     }
                     (title)
                 }
-                main {
+                main.shadowed {
                         (body)
                     }
                 }

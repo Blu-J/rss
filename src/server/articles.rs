@@ -1,4 +1,7 @@
-use std::time::{Duration, SystemTime};
+use std::{
+    char::MAX,
+    time::{Duration, SystemTime},
+};
 
 use crate::{
     clients::Clients,
@@ -9,7 +12,7 @@ use actix_web::{get, web, HttpResponse};
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 use color_eyre::Result;
-use maud::{html, Markup};
+use maud::{html, Markup, PreEscaped};
 use sqlx::{query_file, query_file_as};
 use time_humanize::HumanTime;
 use tracing::instrument;
@@ -41,33 +44,20 @@ pub async fn articles_default(
     .fetch_optional(&clients.pool)
     .await
     .map_err(|x| MyError::CannotFind(x.into()))?
-    .map(|x| x.value)
-    .and_then(|x| {
-        let tags: Vec<String> = x.trim().split(' ').map(|x| x.to_owned()).collect();
-        if tags.is_empty() {
-            None
-        } else {
-            Some(tags)
-        }
-    });
+    .map(|x| x.value);
     let mut title = "All Articles".to_string();
     let articles = match user_tags {
         None => query_file_as!(Article, "queries/articles_all.sql", user_id_part.0)
             .fetch_all(&clients.pool)
             .await
             .map_err(|x| MyError::CannotFind(x.into()))?,
-        Some(tags) => {
-            title = format!("Articles with tags: {}", tags.join(", "));
-            let items = serde_json::to_string(&tags).unwrap();
-            query_file_as!(
-                Article,
-                "queries/articles_by_tags.sql",
-                user_id_part.0,
-                items
-            )
-            .fetch_all(&clients.pool)
-            .await
-            .map_err(|x| MyError::CannotFind(x.into()))?
+        Some(tag) => {
+            title = format!("Articles with tag: {}", tag);
+            dbg!(&tag);
+            query_file_as!(Article, "queries/articles_by_tags.sql", user_id_part.0, tag)
+                .fetch_all(&clients.pool)
+                .await
+                .map_err(|x| MyError::CannotFind(x.into()))?
         }
     };
 
@@ -92,16 +82,17 @@ pub async fn all(
 }
 
 async fn articles_page(articles: &[Article]) -> Result<Markup> {
+    let break_slash: Markup = PreEscaped("&nbsp;/&nbsp;".to_string());
     Ok(html! {
         @for article in articles {
-            .article {
+            .article.shadowed {
                 .figure {
                     @if let Some(src) = &article.image_src {
-                        img src=(src);
+                        img src=(src) loading="lazy" alt=(article.title);
                     }
                 }
                 .non-figure {
-                    .head {
+                    h3.head {
                         a.feed  href=(article.href) {
                             (article.title)
                         }
@@ -113,17 +104,19 @@ async fn articles_page(articles: &[Article]) -> Result<Markup> {
                     }
                     .footer{
 
-                        (article.site_title) " / "
+                        (article.site_title)
+                        (break_slash.clone())
                         div title=(format_date(article.date)) {
                             (format_ago(article.date))
                         }
                         @if let Some(href) = &article.comments_href {
-                            "/"
+                            (break_slash.clone())
                             a href=(href) {
                                 "Comments"
                             }
                         } @else {
-                            "/ No Comments"
+                            (break_slash.clone())
+                            "No Comments"
                         }
                     }
                 }
